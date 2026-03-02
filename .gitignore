@@ -68,3 +68,4 @@ examples/
 
 # Download
 download/
+contracts/.env.deploy

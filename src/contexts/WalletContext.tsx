@@ -12,13 +12,15 @@ interface WalletContextType {
   disconnect: () => void;
   chainId: number | null;
   isCorrectChain: boolean;
+  isMumbai: boolean;
   switchToPolygon: () => Promise<void>;
+  switchToMumbai: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-const POLYGON_CHAIN_ID = 137; // Polygon mainnet
-const MUMBAI_CHAIN_ID = 80001; // Polygon Mumbai testnet
+const POLYGON_CHAIN_ID = 137;
+const MUMBAI_CHAIN_ID = 80001;
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const { address, isConnected, isConnecting } = useAccount();
@@ -27,16 +29,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
 
-  const isCorrectChain = chainId === POLYGON_CHAIN_ID || chainId === MUMBAI_CHAIN_ID;
+  // Check if on correct chain (Mumbai for testing, Polygon for production)
+  const isMumbai = chainId === MUMBAI_CHAIN_ID;
+  const isPolygon = chainId === POLYGON_CHAIN_ID;
+  const isCorrectChain = isMumbai || isPolygon;
 
   const connect = useCallback(async () => {
     try {
-      // Find the best available connector
+      // Find available connector (MetaMask, WalletConnect, etc.)
       const connector = connectors.find(c => c.ready) || connectors[0];
       
       if (!connector) {
-        console.warn('No wallet connector available. Please install MetaMask or another Web3 wallet.');
-        throw new Error('No wallet found. Please install MetaMask extension.');
+        throw new Error('No wallet found. Please install MetaMask or use WalletConnect.');
       }
       
       await connectAsync({ connector });
@@ -52,10 +56,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const switchToPolygon = useCallback(async () => {
     try {
-      const targetChain = process.env.NODE_ENV === 'development' ? polygonMumbai : polygon;
-      await switchChainAsync?.({ chainId: targetChain.id });
+      await switchChainAsync?.({ chainId: POLYGON_CHAIN_ID });
     } catch (error) {
-      console.error('Failed to switch chain:', error);
+      console.error('Failed to switch to Polygon:', error);
+      throw error;
+    }
+  }, [switchChainAsync]);
+
+  const switchToMumbai = useCallback(async () => {
+    try {
+      await switchChainAsync?.({ chainId: MUMBAI_CHAIN_ID });
+    } catch (error) {
+      console.error('Failed to switch to Mumbai:', error);
       throw error;
     }
   }, [switchChainAsync]);
@@ -70,7 +82,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         disconnect,
         chainId: chainId || null,
         isCorrectChain,
+        isMumbai,
         switchToPolygon,
+        switchToMumbai,
       }}
     >
       {children}

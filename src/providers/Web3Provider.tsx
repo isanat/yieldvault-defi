@@ -10,11 +10,14 @@ import '@rainbow-me/rainbowkit/styles.css';
 // Create query client
 const queryClient = new QueryClient();
 
-// Create wagmi config inline to avoid import issues
+// WalletConnect Project ID - Get yours at https://cloud.reown.com/
+const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'b5a5f5a5f5a5f5a5f5a5f5a5f5a5f5a5';
+
+// Create wagmi config
 const config = getDefaultConfig({
   appName: 'YieldVault DeFi',
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'demo-project-id',
-  chains: [polygon, polygonMumbai],
+  projectId,
+  chains: [polygonMumbai, polygon], // Mumbai first for testing
   ssr: true,
 });
 
@@ -27,6 +30,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider 
+          initialChain={polygonMumbai}
           theme={darkTheme({
             accentColor: '#7c3aed',
             accentColorForeground: 'white',
@@ -39,3 +43,6 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     </WagmiProvider>
   );
 }
+
+// Export config for use in other components
+export { config };
