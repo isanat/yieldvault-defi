@@ -7,22 +7,29 @@ async function main() {
   console.log("  YieldVault DeFi - Mumbai Testnet Deploy");
   console.log("========================================");
   console.log("");
-  console.log("Deploying contracts with account:", deployer.address);
-  console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "MATIC");
+  console.log("Deploying with account:", deployer.address);
+  console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "MATIC");
   console.log("");
 
-  // Configuration - Mumbai Testnet
-  const TREASURY = process.env.TREASURY_ADDRESS || process.env.ADMIN_ADDRESS || deployer.address;
-  const ADMIN = process.env.ADMIN_ADDRESS || deployer.address;
+  // All roles go to the deployer (user's wallet)
+  const ADMIN = deployer.address;
+  const TREASURY = deployer.address;
   
-  // Mumbai Testnet USDT (provided by user)
+  // Mumbai Testnet USDT
   const USDT_ADDRESS = process.env.USDT_ADDRESS || "0x701cb85ef71F42C2ce4839f16EdBAB1bB72E51bd";
 
   console.log("Configuration:");
-  console.log("- Admin/Owner:", ADMIN);
+  console.log("- Owner/Admin:", ADMIN);
   console.log("- Treasury:", TREASURY);
   console.log("- USDT:", USDT_ADDRESS);
   console.log("");
+
+  // Check balance
+  const balance = await ethers.provider.getBalance(deployer.address);
+  if (balance < ethers.parseEther("0.01")) {
+    console.log("⚠️  Warning: Low balance. You need at least 0.01 MATIC for deployment.");
+    console.log("Get free MATIC from: https://faucet.polygon.technology/");
+  }
 
   console.log("=== Deploying Core Contracts ===\n");
 
@@ -32,13 +39,11 @@ async function main() {
   const config = await Config.deploy();
   await config.waitForDeployment();
   const configAddress = await config.getAddress();
-  console.log("   Config deployed to:", configAddress);
+  console.log("   ✓ Config:", configAddress);
 
-  // Initialize Config
-  console.log("   Initializing Config...");
-  const initTx = await config.initialize(ADMIN, TREASURY, USDT_ADDRESS);
-  await initTx.wait();
-  console.log("   Config initialized");
+  console.log("   Initializing...");
+  await (await config.initialize(ADMIN, TREASURY, USDT_ADDRESS)).wait();
+  console.log("   ✓ Config initialized");
 
   // 2. Deploy FeeDistributor
   console.log("\n2. Deploying FeeDistributor...");
@@ -46,7 +51,7 @@ async function main() {
   const feeDistributor = await FeeDistributor.deploy(configAddress, USDT_ADDRESS, ADMIN);
   await feeDistributor.waitForDeployment();
   const feeDistributorAddress = await feeDistributor.getAddress();
-  console.log("   FeeDistributor deployed to:", feeDistributorAddress);
+  console.log("   ✓ FeeDistributor:", feeDistributorAddress);
 
   // 3. Deploy Referral
   console.log("\n3. Deploying Referral...");
@@ -54,12 +59,10 @@ async function main() {
   const referral = await Referral.deploy(configAddress, USDT_ADDRESS, ADMIN);
   await referral.waitForDeployment();
   const referralAddress = await referral.getAddress();
-  console.log("   Referral deployed to:", referralAddress);
+  console.log("   ✓ Referral:", referralAddress);
 
-  // Set FeeDistributor on Referral
-  console.log("   Setting FeeDistributor on Referral...");
-  await referral.setFeeDistributor(feeDistributorAddress);
-  console.log("   FeeDistributor set");
+  await (await referral.setFeeDistributor(feeDistributorAddress)).wait();
+  console.log("   ✓ FeeDistributor linked");
 
   // 4. Deploy Vault
   console.log("\n4. Deploying Vault...");
@@ -67,50 +70,46 @@ async function main() {
   const vault = await Vault.deploy(USDT_ADDRESS, configAddress, ADMIN);
   await vault.waitForDeployment();
   const vaultAddress = await vault.getAddress();
-  console.log("   Vault deployed to:", vaultAddress);
+  console.log("   ✓ Vault:", vaultAddress);
 
-  // Set contracts on Vault
-  console.log("   Linking contracts to Vault...");
-  await vault.setReferralContract(referralAddress);
-  await vault.setFeeDistributor(feeDistributorAddress);
-  console.log("   Contracts linked");
+  await (await vault.setReferralContract(referralAddress)).wait();
+  await (await vault.setFeeDistributor(feeDistributorAddress)).wait();
+  console.log("   ✓ Contracts linked to Vault");
 
   // 5. Setup Roles
-  console.log("\n5. Setting up Roles...");
-  await feeDistributor.grantVaultRole(vaultAddress);
-  await feeDistributor.grantReferralRole(referralAddress);
-  await referral.grantVaultRole(vaultAddress);
-  console.log("   Roles granted");
+  console.log("\n5. Setting up roles...");
+  await (await feeDistributor.grantVaultRole(vaultAddress)).wait();
+  await (await feeDistributor.grantReferralRole(referralAddress)).wait();
+  await (await referral.grantVaultRole(vaultAddress)).wait();
+  console.log("   ✓ Roles configured");
 
   // 6. Update Config
-  console.log("\n6. Updating Config with contract addresses...");
-  await config.setVault(vaultAddress);
-  await config.setReferralContract(referralAddress);
-  await config.setFeeDistributor(feeDistributorAddress);
-  await config.setTreasury(TREASURY);
-  console.log("   Config updated");
+  console.log("\n6. Updating config...");
+  await (await config.setVault(vaultAddress)).wait();
+  await (await config.setReferralContract(referralAddress)).wait();
+  await (await config.setFeeDistributor(feeDistributorAddress)).wait();
+  console.log("   ✓ Config updated");
 
-  // Final Summary
+  // Summary
   console.log("\n========================================");
-  console.log("        DEPLOYMENT COMPLETE");
+  console.log("        ✓ DEPLOYMENT COMPLETE!");
   console.log("========================================\n");
   
-  console.log("Contract Addresses (save these!):");
+  console.log("📝 Contract Addresses:");
   console.log("-------------------------------------------");
-  console.log("VAULT_ADDRESS=" + vaultAddress);
-  console.log("REFERRAL_ADDRESS=" + referralAddress);
-  console.log("CONFIG_ADDRESS=" + configAddress);
-  console.log("FEE_DISTRIBUTOR_ADDRESS=" + feeDistributorAddress);
+  console.log("Vault:          ", vaultAddress);
+  console.log("Referral:       ", referralAddress);
+  console.log("Config:         ", configAddress);
+  console.log("FeeDistributor: ", feeDistributorAddress);
   console.log("-------------------------------------------");
-  console.log("");
-  console.log("Owner/Admin:", ADMIN);
-  console.log("Treasury:", TREASURY);
-  console.log("USDT Token:", USDT_ADDRESS);
+  console.log("\nOwner:", ADMIN);
+  console.log("USDT:", USDT_ADDRESS);
   console.log("");
 
-  // Save to .env file for frontend
+  // Save to .env
   const fs = await import('fs');
   const envContent = `
+
 # Deployed Contract Addresses - Mumbai Testnet
 NEXT_PUBLIC_VAULT_ADDRESS=${vaultAddress}
 NEXT_PUBLIC_REFERRAL_ADDRESS=${referralAddress}
@@ -120,14 +119,12 @@ NEXT_PUBLIC_USDT_ADDRESS=${USDT_ADDRESS}
 NEXT_PUBLIC_CHAIN_ID=80001
 `;
   fs.appendFileSync('../.env', envContent);
-  console.log("Addresses saved to .env file");
+  console.log("✓ Addresses saved to .env\n");
 
-  return {
-    config: configAddress,
-    vault: vaultAddress,
-    referral: referralAddress,
-    feeDistributor: feeDistributorAddress,
-  };
+  console.log("Next steps:");
+  console.log("1. Commit and push the updated .env");
+  console.log("2. Your wallet is the owner of all contracts");
+  console.log("3. Connect your wallet to interact with the dApp");
 }
 
 main()

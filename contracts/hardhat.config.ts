@@ -6,8 +6,9 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    version: "0.8.28",
     settings: {
+      evmVersion: "cancun",
       optimizer: {
         enabled: true,
         runs: 200,
@@ -15,12 +16,6 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    hardhat: {
-      forking: {
-        url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
-        enabled: process.env.FORK === "true",
-      },
-    },
     mumbai: {
       url: process.env.MUMBAI_RPC_URL || "https://rpc-mumbai.maticvigil.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
@@ -30,11 +25,6 @@ const config: HardhatUserConfig = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
-  gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
-    currency: "USD",
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-  },
   etherscan: {
     apiKey: {
       polygon: process.env.POLYGONSCAN_API_KEY || "",
@@ -42,10 +32,9 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    sources: "./",
-    tests: "./test",
-    cache: "./cache",
+    sources: "./contracts",
     artifacts: "./artifacts",
+    cache: "./cache",
   },
 };
 

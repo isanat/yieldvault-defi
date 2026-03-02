@@ -4,7 +4,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { polygon, polygonMumbai } from 'wagmi/chains';
+import { polygon, polygonAmoy } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Create query client
@@ -17,7 +17,7 @@ const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'b5a5f5a5
 const config = getDefaultConfig({
   appName: 'YieldVault DeFi',
   projectId,
-  chains: [polygonMumbai, polygon], // Mumbai first for testing
+  chains: [polygonAmoy, polygon], // Amoy first for testing
   ssr: true,
 });
 
@@ -29,8 +29,8 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider 
-          initialChain={polygonMumbai}
+        <RainbowKitProvider
+          initialChain={polygonAmoy}
           theme={darkTheme({
             accentColor: '#7c3aed',
             accentColorForeground: 'white',
