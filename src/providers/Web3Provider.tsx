@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider } from 'wagmi';
-import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { WagmiProvider, http, createConfig } from 'wagmi';
+import { injected, walletConnect } from 'wagmi/connectors';
 import { polygon, polygonAmoy } from 'wagmi/chains';
-import '@rainbow-me/rainbowkit/styles.css';
 
 // Create query client
 const queryClient = new QueryClient();
@@ -13,14 +12,17 @@ const queryClient = new QueryClient();
 // WalletConnect Project ID
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '9a9a4ec5bde3ebded3da0745fbb6cad3';
 
-// Define chains
-const chains = [polygonAmoy, polygon] as const;
-
-// Create wagmi config using RainbowKit's getDefaultConfig
-const config = getDefaultConfig({
-  appName: 'YieldVault DeFi',
-  projectId,
-  chains,
+// Create wagmi config
+const config = createConfig({
+  chains: [polygonAmoy, polygon],
+  connectors: [
+    injected({ target: 'metaMask' }),
+    walletConnect({ projectId, showQrModal: true }),
+  ],
+  transports: {
+    [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology'),
+    [polygon.id]: http('https://polygon-rpc.com'),
+  },
   ssr: true,
 });
 
@@ -32,16 +34,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          initialChain={polygonAmoy}
-          theme={darkTheme({
-            accentColor: '#7c3aed',
-            accentColorForeground: 'white',
-            borderRadius: 'medium',
-          })}
-        >
-          {children}
-        </RainbowKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   );
