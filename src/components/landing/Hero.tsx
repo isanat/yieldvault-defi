@@ -1,16 +1,16 @@
 'use client';
 
-import { useAccount, useConnect } from 'wagmi';
 import { useVault } from '@/hooks/useVault';
+import { useAccount, useConnect } from 'wagmi';
 import { useI18n } from '@/contexts/I18nContext';
 import { formatNumber, formatAPY } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SimpleWalletConnect } from '@/components/wallet/SimpleWalletConnect';
 
 export function Hero() {
   const { vaultInfo, loading } = useVault();
   const { isConnected } = useAccount();
-  const { connectors, connect, isPending } = useConnect();
   const { t, mounted } = useI18n();
 
   // Default English text for SSR
@@ -52,29 +52,6 @@ export function Hero() {
     audited: 'Audited Smart Contracts',
     poweredBy: 'Powered by Aave & QuickSwap',
     lowGas: 'Low Gas Fees on Polygon',
-  };
-
-  const handleConnect = async () => {
-    try {
-      // Try MetaMask first
-      const injectedConnector = connectors.find(c => c.id === 'injected' || c.name === 'MetaMask');
-      if (injectedConnector) {
-        connect({ connector: injectedConnector });
-        return;
-      }
-      // Fallback to WalletConnect
-      const wcConnector = connectors.find(c => c.id === 'walletConnect');
-      if (wcConnector) {
-        connect({ connector: wcConnector });
-        return;
-      }
-      // Last resort
-      if (connectors.length > 0) {
-        connect({ connector: connectors[0] });
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-    }
   };
 
   return (
@@ -160,24 +137,9 @@ export function Hero() {
                 </svg>
               </Button>
             ) : (
-              <Button
-                size="lg"
-                onClick={handleConnect}
-                disabled={isPending}
-                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-lg px-8 py-6"
-              >
-                {isPending ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Connecting...
-                  </>
-                ) : (
-                  heroText.startEarning
-                )}
-              </Button>
+              <div className="scale-110 origin-center">
+                <SimpleWalletConnect />
+              </div>
             )}
             <Button
               size="lg"

@@ -2,55 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useAccount, useDisconnect, useConnect, useChainId } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useI18n } from '@/contexts/I18nContext';
-import { formatAddress } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { LanguageSelector } from '@/components/layout/LanguageSelector';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
-const AMOY_CHAIN_ID = 80002;
-const POLYGON_CHAIN_ID = 137;
+import { SimpleWalletConnect } from '@/components/wallet/SimpleWalletConnect';
 
 export function Header() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { connectors, connect, isPending } = useConnect();
-  const chainId = useChainId();
+  const { isConnected } = useAccount();
   const { t, mounted } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const isAmoy = chainId === AMOY_CHAIN_ID;
-  const isPolygon = chainId === POLYGON_CHAIN_ID;
-  const isCorrectChain = isAmoy || isPolygon;
-
-  const handleConnect = async () => {
-    try {
-      // Try MetaMask first
-      const injectedConnector = connectors.find(c => c.id === 'injected' || c.name === 'MetaMask');
-      if (injectedConnector) {
-        connect({ connector: injectedConnector });
-        return;
-      }
-      // Fallback to WalletConnect
-      const wcConnector = connectors.find(c => c.id === 'walletConnect');
-      if (wcConnector) {
-        connect({ connector: wcConnector });
-        return;
-      }
-      // Last resort - use any available connector
-      if (connectors.length > 0) {
-        connect({ connector: connectors[0] });
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-    }
-  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -97,55 +58,7 @@ export function Header() {
           {/* Wallet Connection & Language */}
           <div className="flex items-center gap-2">
             <LanguageSelector />
-            
-            {isConnected && address ? (
-              <div className="flex items-center gap-2">
-                {/* Network indicator */}
-                {!isCorrectChain && (
-                  <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
-                    Wrong Network
-                  </span>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="border-purple-500/50 bg-purple-500/10 hover:bg-purple-500/20"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-                      {formatAddress(address)}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground" suppressHydrationWarning>
-                      {isAmoy ? 'Amoy Testnet' : isPolygon ? 'Polygon' : `Chain ${chainId}`}
-                    </div>
-                    <DropdownMenuItem onClick={() => disconnect()} className="text-red-500" suppressHydrationWarning>
-                      {mounted ? t('nav.disconnect') : 'Disconnect'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ) : (
-              <Button
-                onClick={handleConnect}
-                disabled={isPending}
-                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-                suppressHydrationWarning
-              >
-                {isPending ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Connecting...
-                  </>
-                ) : (
-                  mounted ? t('nav.connectWallet') : 'Connect Wallet'
-                )}
-              </Button>
-            )}
+            <SimpleWalletConnect />
 
             {/* Mobile Menu Button */}
             <button
