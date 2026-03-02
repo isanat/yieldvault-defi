@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useWallet } from '@/contexts/WalletContext';
+import { useAccount, useDisconnect } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useI18n } from '@/contexts/I18nContext';
 import { formatAddress } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function Header() {
-  const { address, isConnected, isConnecting, connect, disconnect } = useWallet();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { t, mounted } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -45,7 +47,7 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Desktop Navigation - suppress hydration for translated content */}
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8" suppressHydrationWarning>
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
               {mounted ? t('nav.howItWorks') : 'How It Works'}
@@ -80,30 +82,13 @@ export function Header() {
                   <div className="px-2 py-1.5 text-sm text-muted-foreground" suppressHydrationWarning>
                     {mounted ? t('nav.connectedTo') : 'Connected to Polygon'}
                   </div>
-                  <DropdownMenuItem onClick={disconnect} className="text-red-500" suppressHydrationWarning>
+                  <DropdownMenuItem onClick={() => disconnect()} className="text-red-500" suppressHydrationWarning>
                     {mounted ? t('nav.disconnect') : 'Disconnect'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
-                onClick={connect}
-                disabled={isConnecting}
-                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-                suppressHydrationWarning
-              >
-                {isConnecting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    {mounted ? t('nav.connecting') : 'Connecting...'}
-                  </>
-                ) : (
-                  mounted ? t('nav.connectWallet') : 'Connect Wallet'
-                )}
-              </Button>
+              <ConnectButton />
             )}
 
             {/* Mobile Menu Button */}

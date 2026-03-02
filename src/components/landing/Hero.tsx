@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 
 export function Hero() {
   const { vaultInfo, loading } = useVault();
-  const { isConnected, connect } = useWallet();
+  const { isConnected, connect, isConnecting } = useWallet();
   const { t, mounted } = useI18n();
 
   // Default English text for SSR
@@ -139,9 +139,10 @@ export function Hero() {
               <Button
                 size="lg"
                 onClick={connect}
+                disabled={isConnecting}
                 className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-lg px-8 py-6"
               >
-                {heroText.startEarning}
+                {isConnecting ? 'Connecting...' : heroText.startEarning}
               </Button>
             )}
             <Button

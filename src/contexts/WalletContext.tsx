@@ -1,12 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useCallback } from 'react';
-import { useAccount, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
+import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
+import { useAccount, useDisconnect, useChainId, useSwitchChain, useConnect } from 'wagmi';
 
 interface WalletContextType {
   address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
+  connect: () => void;
   disconnect: () => void;
   chainId: number | null;
   isCorrectChain: boolean;
@@ -23,14 +24,41 @@ const AMOY_CHAIN_ID = 80002;
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();
+  const { connectors, connect, isPending, error } = useConnect();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Check if on correct chain (Amoy for testing, Polygon for production)
+  // Check if on correct chain
   const isAmoy = chainId === AMOY_CHAIN_ID;
   const isPolygon = chainId === POLYGON_CHAIN_ID;
   const isCorrectChain = isAmoy || isPolygon;
+
+  // Handle connection errors
+  useEffect(() => {
+    if (error) {
+      console.error('Wallet connection error:', error);
+      setConnectionError(error.message);
+    }
+  }, [error]);
+
+  const handleConnect = useCallback(() => {
+    setConnectionError(null);
+    // Find injected connector (MetaMask, etc.)
+    const connector = connectors.find(c => c.id === 'injected' || c.name === 'MetaMask');
+    if (connector) {
+      connect({ connector });
+    } else {
+      // Try any available connector
+      const anyConnector = connectors[0];
+      if (anyConnector) {
+        connect({ connector: anyConnector });
+      } else {
+        alert('No wallet detected. Please install MetaMask.');
+      }
+    }
+  }, [connectors, connect]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnect();
@@ -57,7 +85,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       value={{
         address: address || null,
         isConnected,
-        isConnecting: false,
+        isConnecting: isPending,
+        connect: handleConnect,
         disconnect,
         chainId: chainId || null,
         isCorrectChain,
