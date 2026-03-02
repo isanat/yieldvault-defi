@@ -46,6 +46,7 @@ contracts/.env
 # Prisma
 prisma/*.db
 prisma/*.db-journal
+db/
 
 # Bot logs
 *.log

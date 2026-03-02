@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
+import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
+import { polygon, polygonMumbai } from 'wagmi/chains';
 
 interface WalletContextType {
   address: string | null;
@@ -9,76 +11,62 @@ interface WalletContextType {
   connect: () => Promise<void>;
   disconnect: () => void;
   chainId: number | null;
+  isCorrectChain: boolean;
+  switchToPolygon: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-// Simulated wallet for demo (in production, use wagmi/rainbowkit)
-const STORAGE_KEY = 'defi_vault_wallet';
+const POLYGON_CHAIN_ID = 137; // Polygon mainnet
+const MUMBAI_CHAIN_ID = 80001; // Polygon Mumbai testnet
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [chainId, setChainId] = useState<number | null>(null);
+  const { address, isConnected, isConnecting } = useAccount();
+  const { connectors, connectAsync } = useConnect();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const chainId = useChainId();
+  const { switchChainAsync } = useSwitchChain();
 
-  // Load wallet from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        setAddress(data.address);
-        setChainId(data.chainId || 137); // Default to Polygon
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-  }, []);
+  const isCorrectChain = chainId === POLYGON_CHAIN_ID || chainId === MUMBAI_CHAIN_ID;
 
   const connect = useCallback(async () => {
-    setIsConnecting(true);
-    
     try {
-      // Simulate wallet connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Generate a random address for demo
-      // In production, this would use window.ethereum.request
-      const randomAddress = '0x' + Array.from({ length: 40 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
-      
-      const walletData = {
-        address: randomAddress,
-        chainId: 137, // Polygon
-      };
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(walletData));
-      setAddress(randomAddress);
-      setChainId(137);
+      // Use the first available connector (usually injected/MetaMask)
+      const connector = connectors[0];
+      if (connector) {
+        await connectAsync({ connector });
+      }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       throw error;
-    } finally {
-      setIsConnecting(false);
     }
-  }, []);
+  }, [connectors, connectAsync]);
 
   const disconnect = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setAddress(null);
-    setChainId(null);
-  }, []);
+    wagmiDisconnect();
+  }, [wagmiDisconnect]);
+
+  const switchToPolygon = useCallback(async () => {
+    try {
+      const targetChain = process.env.NODE_ENV === 'development' ? polygonMumbai : polygon;
+      await switchChainAsync?.({ chainId: targetChain.id });
+    } catch (error) {
+      console.error('Failed to switch chain:', error);
+      throw error;
+    }
+  }, [switchChainAsync]);
 
   return (
     <WalletContext.Provider
       value={{
-        address,
-        isConnected: !!address,
+        address: address || null,
+        isConnected,
         isConnecting,
         connect,
         disconnect,
-        chainId,
+        chainId: chainId || null,
+        isCorrectChain,
+        switchToPolygon,
       }}
     >
       {children}

@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import type { ApiResponse, UserVaultInfo } from '@/types';
-
-const generateMockUserVaultInfo = (address: string): UserVaultInfo => {
-  const hash = address.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  
-  const baseShares = Math.abs(hash % 10000) + 100;
-  const sharePrice = 1.0218;
-  
-  return {
-    address,
-    shares: baseShares,
-    usdValue: baseShares * sharePrice,
-    totalDeposited: baseShares + Math.abs(hash % 500),
-    totalWithdrawn: Math.abs(hash % 100),
-    totalEarnings: baseShares * (sharePrice - 1) + Math.abs(hash % 50),
-    pendingCommissions: Math.abs(hash % 200) / 10,
-    referrer: hash % 3 === 0 ? '0x9876543210987654321098765432109876543210' : null,
-  };
-};
 
 export async function GET(
   request: NextRequest,
@@ -28,6 +8,7 @@ export async function GET(
 ) {
   try {
     const { address } = await params;
+    const normalizedAddress = address.toLowerCase();
     
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return NextResponse.json(
@@ -40,15 +21,56 @@ export async function GET(
       );
     }
 
-    const userVaultInfo = generateMockUserVaultInfo(address);
+    // Get or create user
+    let user = await prisma.user.findUnique({
+      where: { address: normalizedAddress },
+      include: {
+        referrer: { select: { address: true } },
+      },
+    });
+
+    if (!user) {
+      // Create user on first access
+      user = await prisma.user.create({
+        data: { address: normalizedAddress },
+        include: {
+          referrer: { select: { address: true } },
+        },
+      });
+    }
+
+    // Get latest share price
+    const latestSnapshot = await prisma.vaultSnapshot.findFirst({
+      orderBy: { date: 'desc' },
+      select: { sharePrice: true },
+    });
+    const sharePrice = latestSnapshot?.sharePrice || 1.0;
+
+    // Calculate pending commissions
+    const pendingCommissions = await prisma.referralCommission.aggregate({
+      where: {
+        userId: user.id,
+        status: 'pending',
+      },
+      _sum: { amount: true },
+    });
+
+    const userVaultInfo: UserVaultInfo = {
+      address: user.address,
+      shares: user.currentShares,
+      usdValue: user.currentShares * sharePrice,
+      totalDeposited: user.totalDeposited,
+      totalWithdrawn: user.totalWithdrawn,
+      totalEarnings: user.totalEarnings,
+      pendingCommissions: pendingCommissions._sum.amount || 0,
+      referrer: user.referrer?.address || null,
+    };
 
     const response: ApiResponse<{
       vaultInfo: UserVaultInfo;
     }> = {
       success: true,
-      data: {
-        vaultInfo: userVaultInfo,
-      },
+      data: { vaultInfo: userVaultInfo },
       timestamp: Date.now(),
     };
 
