@@ -10,6 +10,8 @@ export type { AccessControl } from "./@openzeppelin/contracts/access/AccessContr
 export { AccessControl__factory } from "./factories/@openzeppelin/contracts/access/AccessControl__factory";
 export type { IAccessControl } from "./@openzeppelin/contracts/access/IAccessControl";
 export { IAccessControl__factory } from "./factories/@openzeppelin/contracts/access/IAccessControl__factory";
+export type { Ownable } from "./@openzeppelin/contracts/access/Ownable";
+export { Ownable__factory } from "./factories/@openzeppelin/contracts/access/Ownable__factory";
 export type { IERC1155Errors } from "./@openzeppelin/contracts/interfaces/draft-IERC6093.sol/IERC1155Errors";
 export { IERC1155Errors__factory } from "./factories/@openzeppelin/contracts/interfaces/draft-IERC6093.sol/IERC1155Errors__factory";
 export type { IERC20Errors } from "./@openzeppelin/contracts/interfaces/draft-IERC6093.sol/IERC20Errors";
@@ -56,6 +58,8 @@ export type { IStrategy } from "./contracts/interfaces/IStrategy";
 export { IStrategy__factory } from "./factories/contracts/interfaces/IStrategy__factory";
 export type { IVault } from "./contracts/interfaces/IVault";
 export { IVault__factory } from "./factories/contracts/interfaces/IVault__factory";
+export type { MockUSDT } from "./contracts/mocks/MockUSDT";
+export { MockUSDT__factory } from "./factories/contracts/mocks/MockUSDT__factory";
 export type { AaveStrategy } from "./contracts/strategies/AaveStrategy";
 export { AaveStrategy__factory } from "./factories/contracts/strategies/AaveStrategy__factory";
 export type { QuickSwapStrategy } from "./contracts/strategies/QuickSwapStrategy";
