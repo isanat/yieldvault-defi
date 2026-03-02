@@ -31,11 +31,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(async () => {
     try {
-      // Use the first available connector (usually injected/MetaMask)
-      const connector = connectors[0];
-      if (connector) {
-        await connectAsync({ connector });
+      // Find the best available connector
+      const connector = connectors.find(c => c.ready) || connectors[0];
+      
+      if (!connector) {
+        console.warn('No wallet connector available. Please install MetaMask or another Web3 wallet.');
+        throw new Error('No wallet found. Please install MetaMask extension.');
       }
+      
+      await connectAsync({ connector });
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       throw error;

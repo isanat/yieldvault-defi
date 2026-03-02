@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export function ConnectButton() {
-  const { isConnected, isConnecting, isCorrectChain, switchToPolygon } = useWallet();
+  const { isConnected, isConnecting, isCorrectChain } = useWallet();
 
   return (
     <RainbowConnectButton.Custom>
