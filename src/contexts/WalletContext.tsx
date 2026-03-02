@@ -35,11 +35,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const isPolygon = chainId === POLYGON_CHAIN_ID;
   const isCorrectChain = isAmoy || isPolygon;
 
-  // Handle connection errors
+  // Handle connection errors - log only, don't set state in effect
   useEffect(() => {
     if (error) {
       console.error('Wallet connection error:', error);
-      setConnectionError(error.message);
     }
   }, [error]);
 
