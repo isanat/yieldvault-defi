@@ -1,54 +1,53 @@
 'use client';
 
 import React, { createContext, useContext, useCallback } from 'react';
-import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
-import { polygon, polygonMumbai } from 'wagmi/chains';
+import { useAccount, useDisconnect, useChainId, useSwitchChain, useConnect } from 'wagmi';
+import { polygon, polygonAmoy } from 'wagmi/chains';
 
 interface WalletContextType {
   address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
-  connect: () => Promise<void>;
+  connect: () => void;
   disconnect: () => void;
   chainId: number | null;
   isCorrectChain: boolean;
-  isMumbai: boolean;
+  isAmoy: boolean;
+  isPolygon: boolean;
   switchToPolygon: () => Promise<void>;
-  switchToMumbai: () => Promise<void>;
+  switchToAmoy: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 const POLYGON_CHAIN_ID = 137;
-const MUMBAI_CHAIN_ID = 80001;
+const AMOY_CHAIN_ID = 80002;
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const { address, isConnected, isConnecting } = useAccount();
-  const { connectors, connectAsync } = useConnect();
+  const { connect, connectors, isPending } = useConnect();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
 
-  // Check if on correct chain (Mumbai for testing, Polygon for production)
-  const isMumbai = chainId === MUMBAI_CHAIN_ID;
+  // Check if on correct chain (Amoy for testing, Polygon for production)
+  const isAmoy = chainId === AMOY_CHAIN_ID;
   const isPolygon = chainId === POLYGON_CHAIN_ID;
-  const isCorrectChain = isMumbai || isPolygon;
+  const isCorrectChain = isAmoy || isPolygon;
 
-  const connect = useCallback(async () => {
-    try {
-      // Find available connector (MetaMask, WalletConnect, etc.)
-      const connector = connectors.find(c => c.ready) || connectors[0];
-      
-      if (!connector) {
-        throw new Error('No wallet found. Please install MetaMask or use WalletConnect.');
+  const handleConnect = useCallback(() => {
+    // Find the injected connector (MetaMask)
+    const injectedConnector = connectors.find(c => c.id === 'injected' || c.id === 'io.metamask');
+    if (injectedConnector) {
+      connect({ connector: injectedConnector });
+    } else {
+      // Fallback to first available connector
+      const connector = connectors[0];
+      if (connector) {
+        connect({ connector });
       }
-      
-      await connectAsync({ connector });
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
-      throw error;
     }
-  }, [connectors, connectAsync]);
+  }, [connectors, connect]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnect();
@@ -63,11 +62,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [switchChainAsync]);
 
-  const switchToMumbai = useCallback(async () => {
+  const switchToAmoy = useCallback(async () => {
     try {
-      await switchChainAsync?.({ chainId: MUMBAI_CHAIN_ID });
+      await switchChainAsync?.({ chainId: AMOY_CHAIN_ID });
     } catch (error) {
-      console.error('Failed to switch to Mumbai:', error);
+      console.error('Failed to switch to Amoy:', error);
       throw error;
     }
   }, [switchChainAsync]);
@@ -77,14 +76,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       value={{
         address: address || null,
         isConnected,
-        isConnecting,
-        connect,
+        isConnecting: isPending,
+        connect: handleConnect,
         disconnect,
         chainId: chainId || null,
         isCorrectChain,
-        isMumbai,
+        isAmoy,
+        isPolygon,
         switchToPolygon,
-        switchToMumbai,
+        switchToAmoy,
       }}
     >
       {children}

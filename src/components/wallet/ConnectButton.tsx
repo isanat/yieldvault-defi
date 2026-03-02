@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, Loader2, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 
 export function ConnectButton() {
-  const { isConnected, isConnecting, isCorrectChain, isMumbai, switchToMumbai } = useWallet();
+  const { isConnected, isConnecting, isCorrectChain, isAmoy, switchToAmoy } = useWallet();
   const contractsDeployed = areContractsDeployed();
 
   return (
@@ -20,17 +20,17 @@ export function ConnectButton() {
           <span>Contracts not deployed</span>
         </div>
       )}
-      
+
       {/* Show network warning */}
       {isConnected && !isCorrectChain && (
         <Button
-          onClick={() => switchToMumbai()}
+          onClick={() => switchToAmoy()}
           variant="destructive"
           size="sm"
           className="text-xs"
         >
           <AlertCircle className="mr-1 h-3 w-3" />
-          Switch to Mumbai
+          Switch to Amoy
         </Button>
       )}
 
@@ -51,7 +51,7 @@ export function ConnectButton() {
             <div
               {...(!ready && {
                 'aria-hidden': true,
-                style: {
+                'style': {
                   opacity: 0,
                   pointerEvents: 'none',
                   userSelect: 'none',
@@ -107,7 +107,7 @@ export function ConnectButton() {
                       ) : (
                         <AlertCircle className="mr-2 h-4 w-4 text-yellow-500" />
                       )}
-                      {chain?.name || (isMumbai ? 'Mumbai' : 'Unknown')}
+                      {chain?.name || (isAmoy ? 'Amoy' : 'Unknown')}
                     </Button>
                     <Button
                       onClick={openAccountModal}
