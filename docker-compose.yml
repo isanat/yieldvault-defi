@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: yieldvault-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-yieldvault}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-yieldvault_secret}
+      POSTGRES_DB: ${DB_NAME:-yieldvault}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-yieldvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yieldvault-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: yieldvault-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yieldvault-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: yieldvault-frontend
+    environment:
+      - NEXT_PUBLIC_VAULT_ADDRESS=${VAULT_ADDRESS}
+      - NEXT_PUBLIC_REFERRAL_ADDRESS=${REFERRAL_ADDRESS}
+      - NEXT_PUBLIC_CONFIG_ADDRESS=${CONFIG_ADDRESS}
+      - DATABASE_URL=postgresql://${DB_USER:-yieldvault}:${DB_PASSWORD:-yieldvault_secret}@postgres:5432/${DB_NAME:-yieldvault}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yieldvault-network
+
+  # Harvest Bot
+  harvest-bot:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: yieldvault-harvest-bot
+    environment:
+      - POLYGON_RPC_URL=${POLYGON_RPC_URL}
+      - BOT_PRIVATE_KEY=${HARVEST_BOT_PRIVATE_KEY}
+      - VAULT_ADDRESS=${VAULT_ADDRESS}
+      - CONFIG_ADDRESS=${CONFIG_ADDRESS}
+      - HARVEST_INTERVAL=0 */6 * * *
+      - MAX_GAS_PRICE=100
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    depends_on:
+      - frontend
+    networks:
+      - yieldvault-network
+    restart: unless-stopped
+
+  # Rebalance Bot
+  rebalance-bot:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: yieldvault-rebalance-bot
+    environment:
+      - POLYGON_RPC_URL=${POLYGON_RPC_URL}
+      - BOT_PRIVATE_KEY=${REBALANCE_BOT_PRIVATE_KEY}
+      - VAULT_ADDRESS=${VAULT_ADDRESS}
+      - STRATEGY_ADDRESSES=${STRATEGY_ADDRESSES}
+      - CHECK_INTERVAL=*/30 * * * *
+      - MIN_HEALTH_FACTOR=1.5
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    depends_on:
+      - frontend
+    networks:
+      - yieldvault-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: yieldvault-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+    networks:
+      - yieldvault-network
+    profiles:
+      - production
+
+networks:
+  yieldvault-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

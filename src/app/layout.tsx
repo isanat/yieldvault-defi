@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { WalletProvider } from "@/contexts/WalletContext";
+import { I18nProvider } from "@/contexts/I18nContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +16,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "YieldVault - Maximize Your DeFi Returns",
+  description: "A professional DeFi yield vault with auto-compounding strategies and a 5-level referral system. Earn up to 23.5% APY on Polygon.",
+  keywords: ["DeFi", "Yield", "Vault", "Polygon", "USDT", "Staking", "Passive Income", "Referral"],
+  authors: [{ name: "YieldVault Team" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/logo.svg",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "YieldVault - Maximize Your DeFi Returns",
+    description: "Professional DeFi yield vault with auto-compounding and referral rewards",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "YieldVault - Maximize Your DeFi Returns",
+    description: "Professional DeFi yield vault with auto-compounding and referral rewards",
   },
 };
 
@@ -41,12 +41,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
-        {children}
-        <Toaster />
+        <I18nProvider>
+          <WalletProvider>
+            {children}
+            <Toaster />
+          </WalletProvider>
+        </I18nProvider>
       </body>
     </html>
   );

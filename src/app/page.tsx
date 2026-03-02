@@ -1,31 +1,39 @@
-'use client'
+'use client';
+
+import { WalletProvider, useWallet } from '@/contexts/WalletContext';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+import { Hero } from '@/components/landing/Hero';
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { Strategies } from '@/components/landing/Strategies';
+import { ReferralProgram } from '@/components/landing/ReferralProgram';
+import { Dashboard } from '@/components/dashboard/Dashboard';
+
+function MainContent() {
+  const { isConnected } = useWallet();
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <Header />
+      
+      {/* Landing Page Sections */}
+      <Hero />
+      <HowItWorks />
+      <Strategies />
+      <ReferralProgram />
+      
+      {/* Dashboard - Only shown when wallet connected */}
+      {isConnected && <Dashboard />}
+      
+      <Footer />
+    </main>
+  );
+}
 
 export default function Home() {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      gap: '2rem',
-      padding: '1rem'
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '6rem',
-        height: '6rem'
-      }}>
-        <img
-          src="/logo.svg"
-          alt="Z.ai Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
-      </div>
-    </div>
-  )
+    <WalletProvider>
+      <MainContent />
+    </WalletProvider>
+  );
 }

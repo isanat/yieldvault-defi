@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,20 +10,297 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== USER MODELS ====================
+
+/// User wallet addresses and their associated data
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  address             String   @unique                    // Wallet address (lowercase)
+  referrerId          String?                             // ID of the user who referred this user
+  referrer            User?   @relation("ReferralTree", fields: [referrerId], references: [id])
+  referrals           User[]   @relation("ReferralTree")  // Users referred by this user
+  
+  // User statistics
+  totalDeposited      Float    @default(0)                // Total USDT deposited
+  totalWithdrawn      Float    @default(0)                // Total USDT withdrawn
+  currentShares       Float    @default(0)                // Current vault shares
+  totalEarnings       Float    @default(0)                // Total earnings from yield
+  
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  lastActivityAt      DateTime @default(now())
+  acceptedTermsAt     DateTime?
+  
+  // Relations
+  deposits            Deposit[]
+  withdrawals         Withdrawal[]
+  commissions         ReferralCommission[]
+  transactions        Transaction[]
+  referralSnapshots   ReferralSnapshot[]
+  
+  @@index([address])
+  @@index([referrerId])
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ==================== VAULT MODELS ====================
+
+/// Daily snapshots of vault state for analytics
+model VaultSnapshot {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique                   // Date of snapshot (UTC midnight)
+  
+  // Vault metrics
+  tvl                 Float                              // Total Value Locked in USDT
+  totalShares         Float                              // Total shares outstanding
+  sharePrice          Float                              // Price per share in USDT
+  totalUsers          Int                                // Number of unique depositors
+  
+  // Performance
+  dailyProfit         Float    @default(0)               // Profit earned that day
+  dailyApy            Float    @default(0)               // APY calculated for the day
+  
+  // Strategy breakdown (JSON)
+  strategyAllocations String?                            // JSON of strategy allocations
+  
+  createdAt           DateTime @default(now())
+  
+  @@index([date])
+}
+
+/// Individual harvest events
+model HarvestEvent {
+  id                  String   @id @default(cuid())
+  txHash              String   @unique                   // Transaction hash
+  timestamp           DateTime @default(now())
+  
+  // Harvest details
+  totalProfit         Float                              // Total profit harvested
+  performanceFee      Float                              // Fee taken
+  netProfit           Float                              // Profit after fees
+  
+  // Strategy breakdown
+  strategyProfits     String?                            // JSON of profit per strategy
+  
+  // Gas
+  gasUsed             Int?
+  gasPrice            Float?
+  
+  createdAt           DateTime @default(now())
+  
+  @@index([timestamp])
+}
+
+// ==================== TRANSACTION MODELS ====================
+
+/// Deposit transactions
+model Deposit {
+  id                  String   @id @default(cuid())
+  txHash              String   @unique
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  
+  amount              Float                              // USDT deposited
+  shares              Float                              // Shares received
+  sharePrice          Float                              // Price at time of deposit
+  feeAmount           Float    @default(0)               // Deposit fee taken
+  
+  referrerAddress     String?                            // Referrer if provided
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+}
+
+/// Withdrawal transactions
+model Withdrawal {
+  id                  String   @id @default(cuid())
+  txHash              String   @unique
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  
+  shares              Float                              // Shares burned
+  amount              Float                              // USDT received
+  sharePrice          Float                              // Price at time of withdrawal
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+}
+
+/// Generic transaction log for all events
+model Transaction {
+  id                  String   @id @default(cuid())
+  txHash              String   @unique
+  userId              String?
+  user                User?    @relation(fields: [userId], references: [id])
+  
+  type                String                             // deposit, withdraw, harvest, commission, etc.
+  amount              Float    @default(0)
+  data                String?                            // JSON of additional data
+  
+  status              String   @default("pending")       // pending, confirmed, failed
+  blockNumber         Int?
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([type])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// ==================== REFERRAL MODELS ====================
+
+/// Referral commission records
+model ReferralCommission {
+  id                  String   @id @default(cuid())
+  txHash              String?
+  userId              String                              // User who received the commission
+  user                User     @relation(fields: [userId], references: [id])
+  
+  fromUserId          String?                             // User who generated the commission
+  level               Int                                 // Referral level (1-5)
+  commissionType      String                              // deposit, interest
+  amount              Float                              // Commission amount in USDT
+  
+  status              String   @default("pending")       // pending, claimed
+  claimedAt           DateTime?
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([userId])
+  @@index([fromUserId])
+  @@index([commissionType])
+}
+
+/// Snapshot of referral statistics
+model ReferralSnapshot {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  date                DateTime                           // Date of snapshot
+  
+  // Stats
+  totalReferrals      Int       @default(0)              // Total referrals (all levels)
+  activeReferrals     Int       @default(0)              // Active depositors
+  totalReferredVolume Float     @default(0)              // Total volume from referrals
+  totalCommissions    Float     @default(0)              // Total commissions earned
+  
+  // Level breakdown
+  level1Count         Int       @default(0)
+  level2Count         Int       @default(0)
+  level3Count         Int       @default(0)
+  level4Count         Int       @default(0)
+  level5Count         Int       @default(0)
+  
+  createdAt           DateTime  @default(now())
+  
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+// ==================== ADMIN MODELS ====================
+
+/// System configuration (off-chain cache)
+model SystemConfig {
+  id                  String   @id @default(cuid())
+  key                 String   @unique
+  value               String                              // JSON value
+  updatedAt           DateTime @updatedAt
+}
+
+/// Admin action logs
+model AdminLog {
+  id                  String   @id @default(cuid())
+  adminAddress        String
+  action              String
+  details             String?                            // JSON of action details
+  txHash              String?
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([adminAddress])
+  @@index([timestamp])
+}
+
+// ==================== STRATEGY MODELS ====================
+
+/// Strategy information
+model Strategy {
+  id                  String   @id @default(cuid())
+  address             String   @unique                   // Contract address
+  name                String
+  description         String?
+  
+  allocation          Float    @default(0)               // Current allocation %
+  isActive            Boolean  @default(true)
+  
+  // Performance tracking
+  totalDeposited      Float    @default(0)
+  totalProfit         Float    @default(0)
+  lastHarvestAt       DateTime?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([address])
+}
+
+/// Strategy performance snapshots
+model StrategySnapshot {
+  id                  String   @id @default(cuid())
+  strategyId          String
+  strategy            Strategy @relation(fields: [strategyId], references: [id])
+  date                DateTime
+  
+  tvl                 Float    @default(0)
+  dailyProfit         Float    @default(0)
+  apy                 Float    @default(0)
+  
+  createdAt           DateTime @default(now())
+  
+  @@unique([strategyId, date])
+  @@index([strategyId])
+}
+
+// ==================== API & BOT MODELS ====================
+
+/// API rate limiting
+model ApiKey {
+  id                  String   @id @default(cuid())
+  key                 String   @unique
+  name                String?
+  isActive            Boolean  @default(true)
+  
+  rateLimit           Int      @default(100)             // Requests per minute
+  requestCount        Int      @default(0)
+  lastRequestAt       DateTime?
+  
+  createdAt           DateTime @default(now())
+  expiresAt           DateTime?
+}
+
+/// Bot execution logs
+model BotExecution {
+  id                  String   @id @default(cuid())
+  botName             String                             // harvest, rebalance, etc.
+  status              String                             // success, failed, skipped
+  txHash              String?
+  gasUsed             Int?
+  error               String?
+  details             String?                            // JSON
+  
+  timestamp           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  
+  @@index([botName])
+  @@index([timestamp])
 }

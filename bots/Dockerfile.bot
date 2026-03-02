@@ -1,0 +1,36 @@
+# YieldVault Bot Dockerfile
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Build
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Install TypeScript
+RUN npm install -g typescript ts-node
+
+# Production
+FROM base AS runner
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 bot
+RUN adduser --system --uid 1001 botuser
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/package.json ./
+
+RUN chown -R botuser:bot /app
+
+USER botuser
+
+# Default command (can be overridden)
+CMD ["npx", "ts-node", "src/index.ts"]

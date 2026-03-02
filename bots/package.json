@@ -1,0 +1,25 @@
+{
+  "name": "yieldvault-bots",
+  "version": "1.0.0",
+  "description": "Automated bots for YieldVault DeFi platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start:harvest": "ts-node src/harvest-bot.ts",
+    "start:rebalance": "ts-node src/rebalance-bot.ts",
+    "start:all": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn src/index.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.2"
+  }
+}
