@@ -58,7 +58,6 @@ async function main() {
   const now = new Date();
   let tvl = 4500000;
   let sharePrice = 1.0;
-  const snapshots = [];
 
   for (let i = 30; i >= 0; i--) {
     const date = new Date(now);
@@ -71,38 +70,47 @@ async function main() {
     
     const dailyApy = 15 + Math.random() * 15;
 
-    snapshots.push({
-      date,
-      tvl: Math.max(tvl, 4000000),
-      totalShares: Math.max(tvl, 4000000) / sharePrice,
-      sharePrice: Math.max(sharePrice, 0.98),
-      totalUsers: Math.floor(1000 + (30 - i) * 10 + Math.random() * 50),
-      dailyProfit: Math.max(tvl, 4000000) * (dailyApy / 100 / 365),
-      dailyApy,
-      strategyAllocations: JSON.stringify({ aave: 60, quickswap: 40 }),
-    });
-  }
-
-  for (const snapshot of snapshots) {
-    await prisma.vaultSnapshot.create({
-      data: snapshot,
+    await prisma.vaultSnapshot.upsert({
+      where: { date },
+      update: {
+        tvl: Math.max(tvl, 4000000),
+        totalShares: Math.max(tvl, 4000000) / sharePrice,
+        sharePrice: Math.max(sharePrice, 0.98),
+        totalUsers: Math.floor(1000 + (30 - i) * 10 + Math.random() * 50),
+        dailyProfit: Math.max(tvl, 4000000) * (dailyApy / 100 / 365),
+        dailyApy,
+        strategyAllocations: JSON.stringify({ aave: 60, quickswap: 40 }),
+      },
+      create: {
+        date,
+        tvl: Math.max(tvl, 4000000),
+        totalShares: Math.max(tvl, 4000000) / sharePrice,
+        sharePrice: Math.max(sharePrice, 0.98),
+        totalUsers: Math.floor(1000 + (30 - i) * 10 + Math.random() * 50),
+        dailyProfit: Math.max(tvl, 4000000) * (dailyApy / 100 / 365),
+        dailyApy,
+        strategyAllocations: JSON.stringify({ aave: 60, quickswap: 40 }),
+      },
     });
   }
   console.log('✓ Vault snapshots created');
 
-  // Create a demo harvest event
-  await prisma.harvestEvent.create({
-    data: {
-      txHash: '0x' + '0'.repeat(64),
-      totalProfit: 1234.56,
-      performanceFee: 123.46,
-      netProfit: 1111.10,
-      strategyProfits: JSON.stringify({ aave: 740.74, quickswap: 493.82 }),
-      gasUsed: 450000,
-      gasPrice: 30,
-    },
-  });
-  console.log('✓ Harvest event created');
+  // Create a demo harvest event (only if not exists)
+  const existingHarvest = await prisma.harvestEvent.findFirst();
+  if (!existingHarvest) {
+    await prisma.harvestEvent.create({
+      data: {
+        txHash: '0x' + '0'.repeat(64),
+        totalProfit: 1234.56,
+        performanceFee: 123.46,
+        netProfit: 1111.10,
+        strategyProfits: JSON.stringify({ aave: 740.74, quickswap: 493.82 }),
+        gasUsed: 450000,
+        gasPrice: 30,
+      },
+    });
+    console.log('✓ Harvest event created');
+  }
 
   console.log('Database seeded successfully!');
 }
