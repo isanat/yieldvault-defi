@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
-import { getVaultContract, getERC20Contract, getAddresses, VAULT_ABI, ERC20_ABI, areContractsDeployed } from '@/lib/contracts';
+import { getAddresses, VAULT_ABI, ERC20_ABI, areContractsDeployed } from '@/lib/contracts';
 
 interface VaultInfo {
   tvl: number;
@@ -77,14 +77,12 @@ export function useVault() {
   const [chartData, setChartData] = useState<VaultChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const contractsDeployed = areContractsDeployed();
 
   const fetchVaultInfo = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Always fetch from API for database-backed data
       const response = await fetch('/api/vault?include=chart&days=30');
       
       if (!response.ok) {
@@ -98,14 +96,12 @@ export function useVault() {
         setChartData(result.data.chartData);
       } else {
         setError(result.error || 'Failed to load vault data');
-        // Use fallback
         setVaultInfo(FALLBACK_VAULT);
         setChartData(generateFallbackChartData(30));
       }
     } catch (err) {
       console.error('Vault fetch error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
-      // Use fallback
       setVaultInfo(FALLBACK_VAULT);
       setChartData(generateFallbackChartData(30));
     } finally {
@@ -115,8 +111,6 @@ export function useVault() {
 
   useEffect(() => {
     fetchVaultInfo();
-    
-    // Refresh every 30 seconds
     const interval = setInterval(fetchVaultInfo, 30000);
     return () => clearInterval(interval);
   }, [fetchVaultInfo]);
@@ -126,21 +120,19 @@ export function useVault() {
     chartData,
     loading,
     error,
-    contractsDeployed,
     refresh: fetchVaultInfo,
   };
 }
 
-export function useUserVault() {
-  const { address } = useAccount();
+export function useUserVault(address: string | null) {
   const [userInfo, setUserInfo] = useState<UserVaultInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const contractsDeployed = areContractsDeployed();
   const addresses = getAddresses();
+  const contractsDeployed = areContractsDeployed();
 
-  // Read user's vault shares if contracts are deployed
-  const { data: shares } = useReadContract({
+  // Read user's vault shares
+  const { data: shares, refetch: refetchShares } = useReadContract({
     address: addresses.vault as `0x${string}`,
     abi: VAULT_ABI,
     functionName: 'balanceOf',
@@ -148,8 +140,8 @@ export function useUserVault() {
     query: { enabled: !!address && contractsDeployed },
   });
 
-  // Read USDT balance
-  const { data: usdtBalance } = useReadContract({
+  // Read USDT balance from blockchain
+  const { data: usdtBalance, refetch: refetchUsdtBalance } = useReadContract({
     address: addresses.usdt as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
@@ -157,14 +149,24 @@ export function useUserVault() {
     query: { enabled: !!address && !!addresses.usdt },
   });
 
-  // Read allowance
-  const { data: allowance } = useReadContract({
+  // Read allowance from blockchain - THIS IS CRITICAL
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: addresses.usdt as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'allowance',
     args: address && addresses.vault ? [address, addresses.vault] : undefined,
     query: { enabled: !!address && contractsDeployed },
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('useUserVault - Blockchain reads:', {
+      address,
+      shares: shares ? formatUnits(shares as bigint, 18) : '0',
+      usdtBalance: usdtBalance ? formatUnits(usdtBalance as bigint, 6) : '0',
+      allowance: allowance ? formatUnits(allowance as bigint, 6) : '0',
+    });
+  }, [address, shares, usdtBalance, allowance]);
 
   const fetchUserInfo = useCallback(async () => {
     if (!address) {
@@ -186,15 +188,38 @@ export function useUserVault() {
       const result = await response.json();
       
       if (result.success && result.data.vault) {
-        // Merge with blockchain data if available
+        // Merge with blockchain data
+        const blockchainAllowance = allowance ? Number(formatUnits(allowance as bigint, 6)) : 0;
+        const blockchainShares = shares ? Number(formatUnits(shares as bigint, 18)) : 0;
+        const blockchainUsdtBalance = usdtBalance ? Number(formatUnits(usdtBalance as bigint, 6)) : 0;
+        
+        console.log('Setting userInfo with allowance:', blockchainAllowance);
+        
         setUserInfo({
           ...result.data.vault,
-          shares: shares ? Number(shares) / 1e18 : result.data.vault.shares,
-          usdtBalance: usdtBalance ? Number(usdtBalance) / 1e6 : 0,
-          allowance: allowance ? Number(allowance) / 1e6 : 0,
+          shares: blockchainShares || result.data.vault.shares,
+          usdtBalance: blockchainUsdtBalance,
+          allowance: blockchainAllowance,
         });
       } else {
         setError(result.error || 'Failed to load user data');
+        // Still set user info with blockchain data
+        const blockchainAllowance = allowance ? Number(formatUnits(allowance as bigint, 6)) : 0;
+        const blockchainShares = shares ? Number(formatUnits(shares as bigint, 18)) : 0;
+        const blockchainUsdtBalance = usdtBalance ? Number(formatUnits(usdtBalance as bigint, 6)) : 0;
+        
+        setUserInfo({
+          address: address.toLowerCase(),
+          shares: blockchainShares,
+          usdValue: 0,
+          totalDeposited: 0,
+          totalWithdrawn: 0,
+          totalEarnings: 0,
+          pendingCommissions: 0,
+          referrer: null,
+          usdtBalance: blockchainUsdtBalance,
+          allowance: blockchainAllowance,
+        });
       }
     } catch (err) {
       console.error('User vault fetch error:', err);
@@ -208,79 +233,203 @@ export function useUserVault() {
     fetchUserInfo();
   }, [fetchUserInfo]);
 
+  const refresh = useCallback(async () => {
+    await Promise.all([
+      refetchShares(),
+      refetchUsdtBalance(),
+      refetchAllowance(),
+    ]);
+    await fetchUserInfo();
+  }, [refetchShares, refetchUsdtBalance, refetchAllowance, fetchUserInfo]);
+
   return { 
     userInfo, 
     loading, 
     error, 
     contractsDeployed,
-    refresh: fetchUserInfo 
+    refresh,
+    // Expose blockchain data directly
+    blockchainData: {
+      shares: shares ? Number(formatUnits(shares as bigint, 18)) : 0,
+      usdtBalance: usdtBalance ? Number(formatUnits(usdtBalance as bigint, 6)) : 0,
+      allowance: allowance ? Number(formatUnits(allowance as bigint, 6)) : 0,
+    },
+    refetchAllowance,
   };
 }
 
-// Hook for contract writes
+// Separate hook for vault actions with individual transaction tracking
 export function useVaultActions() {
-  const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
   const addresses = getAddresses();
   const contractsDeployed = areContractsDeployed();
+  
+  // Approve transaction
+  const { 
+    writeContract: writeApprove, 
+    data: approveHash, 
+    isPending: isApprovePending, 
+    isError: isApproveError, 
+    error: approveError 
+  } = useWriteContract();
+  
+  const { isLoading: isApproveConfirming, isSuccess: isApproveSuccess } = 
+    useWaitForTransactionReceipt({ hash: approveHash });
 
+  // Deposit transaction
+  const { 
+    writeContract: writeDeposit, 
+    data: depositHash, 
+    isPending: isDepositPending, 
+    isError: isDepositError, 
+    error: depositError 
+  } = useWriteContract();
+  
+  const { isLoading: isDepositConfirming, isSuccess: isDepositSuccess } = 
+    useWaitForTransactionReceipt({ hash: depositHash });
+
+  // Withdraw transaction
+  const { 
+    writeContract: writeWithdraw, 
+    data: withdrawHash, 
+    isPending: isWithdrawPending, 
+    isError: isWithdrawError, 
+    error: withdrawError 
+  } = useWriteContract();
+  
+  const { isLoading: isWithdrawConfirming, isSuccess: isWithdrawSuccess } = 
+    useWaitForTransactionReceipt({ hash: withdrawHash });
+
+  // Approve USDT for vault
   const approve = useCallback((amount: string) => {
-    if (!addresses.usdt || !addresses.vault) return;
+    if (!addresses.usdt || !addresses.vault) {
+      console.error('Missing contract addresses');
+      return;
+    }
     
-    const amountBN = parseUnits(amount, 6); // USDT has 6 decimals
+    const amountBN = parseUnits(amount, 6);
+    console.log('Approving USDT:', { 
+      usdt: addresses.usdt, 
+      vault: addresses.vault, 
+      amount: amount,
+      amountBN: amountBN.toString()
+    });
     
-    writeContract({
+    writeApprove({
       address: addresses.usdt as `0x${string}`,
       abi: ERC20_ABI,
       functionName: 'approve',
       args: [addresses.vault as `0x${string}`, amountBN],
     });
-  }, [addresses.usdt, addresses.vault, writeContract]);
+  }, [addresses.usdt, addresses.vault, writeApprove]);
 
+  // Approve max uint256
+  const approveMax = useCallback(() => {
+    if (!addresses.usdt || !addresses.vault) {
+      console.error('Missing contract addresses');
+      return;
+    }
+    
+    // Max uint256
+    const maxAmount = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+    
+    console.log('Approving max USDT');
+    
+    writeApprove({
+      address: addresses.usdt as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [addresses.vault as `0x${string}`, BigInt(maxAmount)],
+    });
+  }, [addresses.usdt, addresses.vault, writeApprove]);
+
+  // Deposit to vault
   const deposit = useCallback((amount: string, referrer?: string) => {
-    if (!addresses.vault) return;
+    if (!addresses.vault) {
+      console.error('Missing vault address');
+      return;
+    }
     
     const amountBN = parseUnits(amount, 6);
+    const referrerAddress = (referrer || '0x0000000000000000000000000000000000000000') as `0x${string}`;
     
-    writeContract({
+    console.log('Depositing to vault:', {
+      vault: addresses.vault,
+      amount: amount,
+      amountBN: amountBN.toString(),
+      referrer: referrerAddress
+    });
+    
+    writeDeposit({
       address: addresses.vault as `0x${string}`,
       abi: VAULT_ABI,
       functionName: 'deposit',
       args: [
         amountBN,
-        addresses.vault as `0x${string}`, // receiver (same as caller usually)
-        (referrer || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+        addresses.vault as `0x${string}`, // receiver
+        referrerAddress,
       ],
     });
-  }, [addresses.vault, writeContract]);
+  }, [addresses.vault, writeDeposit]);
 
-  const withdraw = useCallback((amount: string) => {
-    if (!addresses.vault) return;
+  // Withdraw from vault
+  const withdraw = useCallback((amount: string, userAddress: string) => {
+    if (!addresses.vault) {
+      console.error('Missing vault address');
+      return;
+    }
     
     const amountBN = parseUnits(amount, 6);
     
-    writeContract({
+    console.log('Withdrawing from vault:', {
+      vault: addresses.vault,
+      amount: amount,
+      amountBN: amountBN.toString(),
+      user: userAddress
+    });
+    
+    writeWithdraw({
       address: addresses.vault as `0x${string}`,
       abi: VAULT_ABI,
       functionName: 'withdraw',
       args: [
         amountBN,
-        addresses.vault as `0x${string}`, // receiver
-        addresses.vault as `0x${string}`, // owner
+        userAddress as `0x${string}`, // receiver - should be user
+        userAddress as `0x${string}`, // owner - should be user
       ],
     });
-  }, [addresses.vault, writeContract]);
+  }, [addresses.vault, writeWithdraw]);
 
   return {
+    // Actions
     approve,
+    approveMax,
     deposit,
     withdraw,
-    hash,
-    isPending,
-    isConfirming,
-    isSuccess,
-    isError,
-    error,
+    
+    // Approve state
+    approveHash,
+    isApprovePending,
+    isApproveConfirming,
+    isApproveSuccess,
+    isApproveError,
+    approveError,
+    
+    // Deposit state
+    depositHash,
+    isDepositPending,
+    isDepositConfirming,
+    isDepositSuccess,
+    isDepositError,
+    depositError,
+    
+    // Withdraw state
+    withdrawHash,
+    isWithdrawPending,
+    isWithdrawConfirming,
+    isWithdrawSuccess,
+    isWithdrawError,
+    withdrawError,
+    
     contractsDeployed,
   };
 }

@@ -1,10 +1,8 @@
 'use client';
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { formatUnits } from 'viem';
 import { useWallet } from '@/contexts/WalletContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUserVault, useVaultActions } from '@/hooks/useVault';
@@ -17,44 +15,65 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const USDT_ADDRESS = '0x1E7C689D2da8DCc87bB4E1E4f8650551bd538719' as `0x${string}`;
-const VAULT_ADDRESS = '0xEB70c71b57F0c4f740c27e39e58eE4D9d59ebf64' as `0x${string}`;
-
-type PendingTransaction = {
-  type: 'deposit' | 'withdraw';
-  amount: string;
-  referrer?: string;
-} | null;
 
 export function Dashboard() {
   const { address, isAmoy } = useWallet();
   const { t, mounted } = useI18n();
-  const { userInfo, loading: userLoading, refresh: refreshUserVault } = useUserVault(address);
+  
+  // User vault data with blockchain reads
+  const { 
+    userInfo, 
+    loading: userLoading, 
+    blockchainData,
+    refresh: refreshUserVault,
+    refetchAllowance,
+  } = useUserVault(address);
+  
   const { stats, commissions, claiming, claimCommissions, refresh: refreshReferral } = useReferral(address);
-  const { approve, deposit, withdraw, isPending, isConfirming, isSuccess, isError, error: txError, hash } = useVaultActions();
+  
+  // Vault actions with separate states
+  const {
+    approve,
+    approveMax,
+    deposit,
+    withdraw,
+    // Approve states
+    approveHash,
+    isApprovePending,
+    isApproveConfirming,
+    isApproveSuccess,
+    isApproveError,
+    approveError,
+    // Deposit states
+    depositHash,
+    isDepositPending,
+    isDepositConfirming,
+    isDepositSuccess,
+    isDepositError,
+    depositError,
+    // Withdraw states
+    withdrawHash,
+    isWithdrawPending,
+    isWithdrawConfirming,
+    isWithdrawSuccess,
+    isWithdrawError,
+    withdrawError,
+  } = useVaultActions();
   
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
   const [txStatus, setTxStatus] = useState<string | null>(null);
-  const [pendingTx, setPendingTx] = useState<PendingTransaction>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [waitingForAllowance, setWaitingForAllowance] = useState(false);
 
-  // Read USDT balance
+  // Read USDT balance using wagmi directly
   const { data: usdtBalance, refetch: refetchUsdtBalance } = useBalance({
     address,
     token: USDT_ADDRESS,
     query: {
       enabled: !!address && isAmoy,
-    },
-  });
-
-  // Read allowance
-  const { data: allowanceData, refetch: refetchAllowance } = useBalance({
-    address,
-    token: USDT_ADDRESS,
-    query: {
-      enabled: !!address,
     },
   });
 
@@ -100,7 +119,6 @@ export function Dashboard() {
     claiming: t('dashboard.claiming'),
     commission: t('dashboard.commission'),
     level: (l: number) => t('dashboard.level', { level: l }),
-    demo: t('common.demo'),
     success: t('common.success'),
   } : {
     title: 'Your Dashboard',
@@ -142,31 +160,98 @@ export function Dashboard() {
     claiming: 'Claiming...',
     commission: 'Commission',
     level: (l: number) => `Level ${l}`,
-    demo: 'Demo',
     success: 'Success',
   };
 
-  // Check if needs approval - use useMemo instead of useEffect
+  // Get allowance directly from blockchain data
+  const currentAllowance = blockchainData?.allowance || 0;
+  
+  // Check if needs approval - use blockchain data directly
   const needsApproval = useMemo(() => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return false;
-    const currentAllowance = userInfo?.allowance || 0;
-    return currentAllowance < parseFloat(depositAmount);
-  }, [depositAmount, userInfo?.allowance]);
+    const needsIt = currentAllowance < parseFloat(depositAmount);
+    console.log('needsApproval check:', { 
+      depositAmount, 
+      currentAllowance, 
+      needsIt 
+    });
+    return needsIt;
+  }, [depositAmount, currentAllowance]);
+
+  // Handle approve success - refetch allowance
+  useEffect(() => {
+    if (isApproveSuccess) {
+      console.log('Approve successful, refetching allowance...');
+      setTxStatus('Approval confirmed! Refreshing allowance...');
+      
+      // Refetch allowance after short delay
+      setTimeout(async () => {
+        await refetchAllowance();
+        await refreshUserVault();
+        setWaitingForAllowance(false);
+        setTxStatus('Approval complete! You can now deposit.');
+        setTimeout(() => setTxStatus(null), 3000);
+      }, 2000);
+    }
+  }, [isApproveSuccess, refetchAllowance, refreshUserVault]);
+
+  // Handle approve error
+  useEffect(() => {
+    if (isApproveError && approveError) {
+      setTxStatus(`Approval failed: ${approveError.message || 'Unknown error'}`);
+      setTimeout(() => setTxStatus(null), 5000);
+    }
+  }, [isApproveError, approveError]);
+
+  // Handle deposit success - record to database
+  useEffect(() => {
+    if (isDepositSuccess && depositHash) {
+      setTxStatus('Deposit confirmed! Recording to database...');
+      recordTransaction('deposit', depositHash, depositAmount);
+    }
+  }, [isDepositSuccess, depositHash]);
+
+  // Handle deposit error
+  useEffect(() => {
+    if (isDepositError && depositError) {
+      setTxStatus(`Deposit failed: ${depositError.message || 'Unknown error'}`);
+      setTimeout(() => setTxStatus(null), 5000);
+    }
+  }, [isDepositError, depositError]);
+
+  // Handle withdraw success - record to database
+  useEffect(() => {
+    if (isWithdrawSuccess && withdrawHash) {
+      setTxStatus('Withdrawal confirmed! Recording to database...');
+      recordTransaction('withdraw', withdrawHash, withdrawAmount);
+    }
+  }, [isWithdrawSuccess, withdrawHash]);
+
+  // Handle withdraw error
+  useEffect(() => {
+    if (isWithdrawError && withdrawError) {
+      setTxStatus(`Withdrawal failed: ${withdrawError.message || 'Unknown error'}`);
+      setTimeout(() => setTxStatus(null), 5000);
+    }
+  }, [isWithdrawError, withdrawError]);
 
   // Record transaction to database
-  const recordTransaction = useCallback(async (
+  const recordTransaction = async (
     type: 'deposit' | 'withdraw',
     txHash: string,
-    amount: string,
-    referrer?: string
+    amount: string
   ) => {
     if (!address) return;
     
     setIsRecording(true);
-    setTxStatus('Recording transaction to database...');
     
     try {
       const endpoint = type === 'deposit' ? '/api/deposit' : '/api/withdraw';
+      
+      // Get referrer from URL if present
+      const urlParams = new URLSearchParams(window.location.search);
+      const referrer = urlParams.get('ref') || undefined;
+      
       const body = type === 'deposit' 
         ? { 
             address, 
@@ -176,9 +261,11 @@ export function Dashboard() {
           }
         : { 
             address, 
-            shares: parseFloat(amount) / (userInfo?.usdValue || 1) * (userInfo?.shares || 1), // Convert USD to shares
+            shares: parseFloat(amount) / (userInfo?.usdValue || 1) * (userInfo?.shares || 1),
             txHash 
           };
+      
+      console.log('Recording transaction:', { type, endpoint, body });
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -189,7 +276,16 @@ export function Dashboard() {
       const result = await response.json();
       
       if (result.success) {
-        setTxStatus('Transaction recorded successfully!');
+        setTxStatus(`${type === 'deposit' ? 'Deposit' : 'Withdrawal'} recorded successfully!`);
+        
+        // Clear inputs
+        setDepositAmount('');
+        setWithdrawAmount('');
+        
+        // Refresh all data
+        await refreshUserVault();
+        await refreshReferral();
+        await refetchUsdtBalance();
       } else {
         console.error('Failed to record transaction:', result.error);
         setTxStatus(`Warning: Blockchain tx confirmed but database record failed: ${result.error}`);
@@ -199,44 +295,9 @@ export function Dashboard() {
       setTxStatus('Warning: Failed to record to database');
     } finally {
       setIsRecording(false);
-    }
-  }, [address, userInfo]);
-
-  // Handle transaction success - record to database
-  useEffect(() => {
-    if (isSuccess && hash && pendingTx) {
-      setTxStatus('Transaction confirmed! Recording to database...');
-      
-      // Record the transaction
-      recordTransaction(
-        pendingTx.type,
-        hash,
-        pendingTx.amount,
-        pendingTx.referrer
-      ).then(() => {
-        setDepositAmount('');
-        setWithdrawAmount('');
-        setPendingTx(null);
-        
-        // Refresh all data
-        refreshUserVault();
-        refreshReferral();
-        refetchUsdtBalance();
-        refetchAllowance();
-        
-        setTimeout(() => setTxStatus(null), 5000);
-      });
-    }
-  }, [isSuccess, hash, pendingTx, recordTransaction, refreshUserVault, refreshReferral, refetchUsdtBalance, refetchAllowance]);
-
-  // Handle transaction error
-  useEffect(() => {
-    if (isError && txError) {
-      setTxStatus(`Error: ${txError.message || 'Transaction failed'}`);
-      setPendingTx(null);
       setTimeout(() => setTxStatus(null), 5000);
     }
-  }, [isError, txError]);
+  };
 
   const handleCopyLink = async () => {
     const success = await copyToClipboard(referralLink);
@@ -246,13 +307,18 @@ export function Dashboard() {
     }
   };
 
+  // Approve USDT
   const handleApprove = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return;
     
-    setTxStatus('Approving USDT...');
-    approve(depositAmount);
+    setTxStatus('Approving USDT... Check your wallet for confirmation.');
+    setWaitingForAllowance(true);
+    
+    // Use approveMax for better UX - user only needs to approve once
+    approveMax();
   };
 
+  // Deposit USDT
   const handleDeposit = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return;
     
@@ -268,21 +334,15 @@ export function Dashboard() {
     const urlParams = new URLSearchParams(window.location.search);
     const referrer = urlParams.get('ref') || undefined;
     
-    // Set pending transaction for later recording
-    setPendingTx({ type: 'deposit', amount: depositAmount, referrer });
-    
     deposit(depositAmount, referrer);
   };
 
+  // Withdraw USDT
   const handleWithdraw = async () => {
-    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return;
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0 || !address) return;
     
     setTxStatus('Confirm withdrawal in your wallet...');
-    
-    // Set pending transaction for later recording
-    setPendingTx({ type: 'withdraw', amount: withdrawAmount });
-    
-    withdraw(withdrawAmount);
+    withdraw(withdrawAmount, address);
   };
 
   const handleClaim = async () => {
@@ -296,7 +356,13 @@ export function Dashboard() {
   // Get USDT balance display
   const usdtBalanceDisplay = usdtBalance 
     ? parseFloat(formatUnits(usdtBalance.value, usdtBalance.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })
-    : '0';
+    : blockchainData?.usdtBalance?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || '0';
+
+  // Is any transaction in progress
+  const isTransactionInProgress = isApprovePending || isApproveConfirming || 
+    isDepositPending || isDepositConfirming || 
+    isWithdrawPending || isWithdrawConfirming || 
+    isRecording;
 
   if (!address) {
     return null;
@@ -316,12 +382,6 @@ export function Dashboard() {
                 <p className="text-muted-foreground mb-4">
                   Please switch to Polygon Amoy testnet to use the vault.
                 </p>
-                <Button 
-                  onClick={() => {/* Switch network logic */}}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-black"
-                >
-                  Switch to Amoy
-                </Button>
               </CardContent>
             </Card>
           </div>
@@ -352,15 +412,32 @@ export function Dashboard() {
             </div>
           </div>
 
+          {/* Debug Info */}
+          <div className="mb-4 p-3 rounded-lg bg-slate-800/50 text-xs text-slate-400">
+            <div>Allowance: {currentAllowance} USDT | Needs Approval: {needsApproval.toString()}</div>
+          </div>
+
           {/* Transaction Status */}
           {txStatus && (
-            <div className={`mb-6 p-4 rounded-lg ${isSuccess ? 'bg-green-500/10 border border-green-500/20' : isError ? 'bg-red-500/10 border border-red-500/20' : 'bg-blue-500/10 border border-blue-500/20'}`}>
-              <div className={`font-medium ${isSuccess ? 'text-green-400' : isError ? 'text-red-400' : 'text-blue-400'}`}>
+            <div className={`mb-6 p-4 rounded-lg ${
+              isApproveSuccess || isDepositSuccess || isWithdrawSuccess 
+                ? 'bg-green-500/10 border border-green-500/20' 
+                : (isApproveError || isDepositError || isWithdrawError)
+                  ? 'bg-red-500/10 border border-red-500/20' 
+                  : 'bg-blue-500/10 border border-blue-500/20'
+            }`}>
+              <div className={`font-medium ${
+                isApproveSuccess || isDepositSuccess || isWithdrawSuccess 
+                  ? 'text-green-400' 
+                  : (isApproveError || isDepositError || isWithdrawError)
+                    ? 'text-red-400' 
+                    : 'text-blue-400'
+              }`}>
                 {txStatus}
               </div>
-              {hash && (
+              {(approveHash || depositHash || withdrawHash) && (
                 <a 
-                  href={`https://amoy.polygonscan.com/tx/${hash}`}
+                  href={`https://amoy.polygonscan.com/tx/${approveHash || depositHash || withdrawHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-blue-400 hover:underline"
@@ -380,7 +457,7 @@ export function Dashboard() {
                   {userLoading ? '...' : formatNumber(userInfo?.usdValue || 0, { currency: true })}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {userLoading ? '...' : formatNumber(userInfo?.shares || 0, { decimals: 2 })} {text.shares}
+                  {userLoading ? '...' : formatNumber(blockchainData?.shares || userInfo?.shares || 0, { decimals: 2 })} {text.shares}
                 </div>
               </CardContent>
             </Card>
@@ -425,7 +502,6 @@ export function Dashboard() {
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Performance Chart Placeholder */}
                 <Card className="bg-card/50 backdrop-blur-sm" suppressHydrationWarning>
                   <CardHeader>
                     <CardTitle className="text-lg">{text.sharePriceHistory}</CardTitle>
@@ -442,7 +518,6 @@ export function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity */}
                 <Card className="bg-card/50 backdrop-blur-sm" suppressHydrationWarning>
                   <CardHeader>
                     <CardTitle className="text-lg">{text.recentActivity}</CardTitle>
@@ -485,6 +560,12 @@ export function Dashboard() {
                     <span className="font-semibold text-green-400">{usdtBalanceDisplay} USDT</span>
                   </div>
                   
+                  {/* Current Allowance */}
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                    <span className="text-sm text-muted-foreground">Current Allowance:</span>
+                    <span className="font-semibold">{currentAllowance.toLocaleString()} USDT</span>
+                  </div>
+                  
                   <div>
                     <Label htmlFor="deposit-amount">{text.depositAmount}</Label>
                     <div className="flex gap-2 mt-1.5">
@@ -511,14 +592,14 @@ export function Dashboard() {
                     <p>• {text.receiveShares}</p>
                   </div>
                   
-                  {/* Approval needed */}
+                  {/* Show approve button if needs approval */}
                   {needsApproval && depositAmount && parseFloat(depositAmount) > 0 && (
                     <Button 
                       className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
                       onClick={handleApprove}
-                      disabled={isPending || isConfirming || isRecording}
+                      disabled={isApprovePending || isApproveConfirming || waitingForAllowance}
                     >
-                      {isPending || isConfirming ? (
+                      {isApprovePending || isApproveConfirming ? (
                         <span className="flex items-center gap-2">
                           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -527,26 +608,27 @@ export function Dashboard() {
                           Approving...
                         </span>
                       ) : (
-                        '1. Approve USDT First'
+                        '1. Approve USDT'
                       )}
                     </Button>
                   )}
                   
+                  {/* Deposit button */}
                   <Button 
                     className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                     onClick={handleDeposit}
-                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || needsApproval || isPending || isConfirming || isRecording}
+                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || needsApproval || isTransactionInProgress}
                   >
-                    {isPending || isConfirming || isRecording ? (
+                    {isDepositPending || isDepositConfirming || isRecording ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        {isRecording ? 'Recording...' : needsApproval ? 'Approving...' : 'Depositing...'}
+                        {isRecording ? 'Recording...' : 'Depositing...'}
                       </span>
                     ) : (
-                      text.depositButton
+                      needsApproval ? '2. Deposit USDT (approve first)' : text.depositButton
                     )}
                   </Button>
                 </CardContent>
@@ -560,7 +642,6 @@ export function Dashboard() {
                   <CardTitle>{text.withdrawTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Vault Balance */}
                   <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
                     <span className="text-sm text-muted-foreground">Your Vault Balance:</span>
                     <span className="font-semibold text-purple-400">
@@ -598,9 +679,9 @@ export function Dashboard() {
                     className="w-full"
                     variant="outline"
                     onClick={handleWithdraw}
-                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isPending || isConfirming || isRecording}
+                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isTransactionInProgress}
                   >
-                    {isPending || isConfirming || isRecording ? (
+                    {isWithdrawPending || isWithdrawConfirming || isRecording ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -618,7 +699,6 @@ export function Dashboard() {
 
             {/* Referral Tab */}
             <TabsContent value="referral" className="space-y-6" suppressHydrationWarning>
-              {/* Referral Link */}
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>{text.yourReferralLink}</CardTitle>
@@ -633,7 +713,6 @@ export function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Commission Stats */}
               <div className="grid md:grid-cols-3 gap-4">
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardContent className="pt-6">
@@ -655,7 +734,6 @@ export function Dashboard() {
                 </Card>
               </div>
 
-              {/* Level Breakdown */}
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>{text.commissionBreakdown}</CardTitle>
@@ -683,7 +761,6 @@ export function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Claim Button */}
               {stats?.pendingCommissions && stats.pendingCommissions > 0 && (
                 <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
                   <CardContent className="pt-6">
