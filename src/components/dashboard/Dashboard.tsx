@@ -138,7 +138,7 @@ export function Dashboard() {
     noRecentActivity: 'No recent activity',
     depositTitle: 'Deposit USDT',
     depositAmount: 'Amount (USDT)',
-    depositFee: 'Deposit fee: 5% (distributed to referral network)',
+    depositFee: 'Deposit fee: 0.5% (distributed to referral network)',
     receiveShares: 'You will receive yvSHARE tokens representing your stake',
     depositButton: 'Deposit USDT',
     withdrawTitle: 'Withdraw USDT',
