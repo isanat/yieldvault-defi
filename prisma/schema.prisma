@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ==================== USER MODELS ====================
@@ -18,7 +17,7 @@ model User {
   id                  String   @id @default(cuid())
   address             String   @unique
   referrerId          String?
-  referrer            User?    @relation("ReferralTree", fields: [referrerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  referrer            User?    @relation("ReferralTree", fields: [referrerId], references: [id], onDelete: SetNull)
   referrals           User[]   @relation("ReferralTree")
   
   totalDeposited      Float    @default(0)
