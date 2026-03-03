@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to avoid SSR issues with wallet libraries
+export const dynamic = 'force-dynamic';
+
 import { WalletProvider, useWallet } from '@/contexts/WalletContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';

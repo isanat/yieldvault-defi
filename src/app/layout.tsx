@@ -6,6 +6,9 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { Web3Provider } from "@/providers/Web3Provider";
 
+// Force dynamic rendering to avoid SSR issues with wallet libraries
+export const dynamic = 'force-dynamic';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
