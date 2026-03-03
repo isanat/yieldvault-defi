@@ -38,8 +38,9 @@ contract Referral is AccessControl {
         _grantRole(ADMIN_ROLE, _admin);
         _grantRole(VAULT_ROLE, _admin);
 
-        // Default: 10%, 5%, 3%, 2%, 1% = 21% total
-        commissionRates = [uint256(1000), 500, 300, 200, 100];
+        // Commission rates aligned with Config.sol: 40%, 25%, 15%, 12%, 8% = 100%
+        // These are percentages of the deposit fee distributed to referrers
+        commissionRates = [uint256(4000), 2500, 1500, 1200, 800];
     }
 
     function grantVaultRole(address vault) external onlyRole(ADMIN_ROLE) {
@@ -171,6 +172,7 @@ contract Referral is AccessControl {
             commissionRates[i] = rates[i];
             total += rates[i];
         }
-        require(total <= 2500, "Total rates exceed 25%");
+        // Max 100% of deposit fees can be distributed to referrers
+        require(total <= 10000, "Total rates exceed 100%");
     }
 }

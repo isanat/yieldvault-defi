@@ -4,4 +4,5 @@
 export type { Config } from "./Config";
 export type { FeeDistributor } from "./FeeDistributor";
 export type { Referral } from "./Referral";
+export type { SimpleTimelock } from "./SimpleTimelock";
 export type { Vault } from "./Vault";

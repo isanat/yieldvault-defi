@@ -4,4 +4,5 @@
 export { Config__factory } from "./Config__factory";
 export { FeeDistributor__factory } from "./FeeDistributor__factory";
 export { Referral__factory } from "./Referral__factory";
+export { SimpleTimelock__factory } from "./SimpleTimelock__factory";
 export { Vault__factory } from "./Vault__factory";

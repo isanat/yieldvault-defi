@@ -137,6 +137,82 @@ export const VAULT_ABI = [
   },
 ] as const;
 
+export const CONFIG_ABI = [
+  {
+    name: 'performanceFeeBP',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'depositFeeBP',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'managementFeeBP',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'treasury',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+  {
+    name: 'depositsEnabled',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'bool' }],
+  },
+  {
+    name: 'withdrawalsEnabled',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'bool' }],
+  },
+  {
+    name: 'getReferralRates',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256[5]' }],
+  },
+] as const;
+
+export const STRATEGY_ABI = [
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'totalDeposited',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'vault',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+] as const;
+
 export const REFERRAL_ABI = [
   {
     name: 'registerReferrer',
@@ -184,6 +260,9 @@ const getAddresses = () => ({
   referral: process.env.NEXT_PUBLIC_REFERRAL_ADDRESS as Address | undefined,
   config: process.env.NEXT_PUBLIC_CONFIG_ADDRESS as Address | undefined,
   usdt: process.env.NEXT_PUBLIC_USDT_ADDRESS as Address | undefined,
+  feeDistributor: process.env.NEXT_PUBLIC_FEE_DISTRIBUTOR_ADDRESS as Address | undefined,
+  aaveStrategy: process.env.NEXT_PUBLIC_AAVE_STRATEGY_ADDRESS as Address | undefined,
+  quickswapStrategy: process.env.NEXT_PUBLIC_QUICKSWAP_STRATEGY_ADDRESS as Address | undefined,
 });
 
 // Create contract instances
@@ -213,6 +292,25 @@ export function getReferralContract() {
   return getContract({
     address: addresses.referral,
     abi: REFERRAL_ABI,
+    client: publicClient,
+  });
+}
+
+export function getConfigContract() {
+  const addresses = getAddresses();
+  if (!addresses.config) return null;
+  
+  return getContract({
+    address: addresses.config,
+    abi: CONFIG_ABI,
+    client: publicClient,
+  });
+}
+
+export function getStrategyContract(address: Address) {
+  return getContract({
+    address,
+    abi: STRATEGY_ABI,
     client: publicClient,
   });
 }

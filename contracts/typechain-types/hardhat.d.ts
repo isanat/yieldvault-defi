@@ -98,6 +98,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Referral__factory>;
     getContractFactory(
+      name: "SimpleTimelock",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SimpleTimelock__factory>;
+    getContractFactory(
       name: "Vault",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Vault__factory>;
@@ -126,9 +130,29 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.AaveStrategy__factory>;
     getContractFactory(
+      name: "AaveV3Strategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AaveV3Strategy__factory>;
+    getContractFactory(
+      name: "IPool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IPool__factory>;
+    getContractFactory(
+      name: "IPoolAddressesProvider",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IPoolAddressesProvider__factory>;
+    getContractFactory(
       name: "QuickSwapStrategy",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.QuickSwapStrategy__factory>;
+    getContractFactory(
+      name: "IQuickSwapV3Router",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IQuickSwapV3Router__factory>;
+    getContractFactory(
+      name: "QuickSwapV3Strategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.QuickSwapV3Strategy__factory>;
 
     getContractAt(
       name: "AccessControl",
@@ -236,6 +260,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Referral>;
     getContractAt(
+      name: "SimpleTimelock",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SimpleTimelock>;
+    getContractAt(
       name: "Vault",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -271,10 +300,35 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.AaveStrategy>;
     getContractAt(
+      name: "AaveV3Strategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AaveV3Strategy>;
+    getContractAt(
+      name: "IPool",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IPool>;
+    getContractAt(
+      name: "IPoolAddressesProvider",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IPoolAddressesProvider>;
+    getContractAt(
       name: "QuickSwapStrategy",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.QuickSwapStrategy>;
+    getContractAt(
+      name: "IQuickSwapV3Router",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IQuickSwapV3Router>;
+    getContractAt(
+      name: "QuickSwapV3Strategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.QuickSwapV3Strategy>;
 
     deployContract(
       name: "AccessControl",
@@ -361,6 +415,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Referral>;
     deployContract(
+      name: "SimpleTimelock",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleTimelock>;
+    deployContract(
       name: "Vault",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Vault>;
@@ -389,9 +447,29 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.AaveStrategy>;
     deployContract(
+      name: "AaveV3Strategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AaveV3Strategy>;
+    deployContract(
+      name: "IPool",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IPool>;
+    deployContract(
+      name: "IPoolAddressesProvider",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IPoolAddressesProvider>;
+    deployContract(
       name: "QuickSwapStrategy",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.QuickSwapStrategy>;
+    deployContract(
+      name: "IQuickSwapV3Router",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3Router>;
+    deployContract(
+      name: "QuickSwapV3Strategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.QuickSwapV3Strategy>;
 
     deployContract(
       name: "AccessControl",
@@ -499,6 +577,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Referral>;
     deployContract(
+      name: "SimpleTimelock",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleTimelock>;
+    deployContract(
       name: "Vault",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -534,10 +617,35 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.AaveStrategy>;
     deployContract(
+      name: "AaveV3Strategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AaveV3Strategy>;
+    deployContract(
+      name: "IPool",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IPool>;
+    deployContract(
+      name: "IPoolAddressesProvider",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IPoolAddressesProvider>;
+    deployContract(
       name: "QuickSwapStrategy",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.QuickSwapStrategy>;
+    deployContract(
+      name: "IQuickSwapV3Router",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3Router>;
+    deployContract(
+      name: "QuickSwapV3Strategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.QuickSwapV3Strategy>;
 
     // default types
     getContractFactory(
