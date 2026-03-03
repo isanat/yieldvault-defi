@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import { useState, useEffect, useMemo } from 'react';
+import { useAccount, useBalance } from 'wagmi';
+import { parseUnits, formatUnits } from 'viem';
 import { useWallet } from '@/contexts/WalletContext';
 import { useI18n } from '@/contexts/I18nContext';
-import { useUserVault } from '@/hooks/useVault';
+import { useUserVault, useVaultActions } from '@/hooks/useVault';
 import { useReferral } from '@/hooks/useReferral';
 import { formatNumber, formatAddress, generateReferralLink, copyToClipboard } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,15 +16,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const USDT_ADDRESS = '0x1E7C689D2da8DCc87bB4E1E4f8650551bd538719' as `0x${string}`;
+const VAULT_ADDRESS = '0xEB70c71b57F0c4f740c27e39e58eE4D9d59ebf64' as `0x${string}`;
+
 export function Dashboard() {
-  const { address } = useWallet();
+  const { address, isAmoy } = useWallet();
   const { t, mounted } = useI18n();
-  const { userInfo, loading: userLoading } = useUserVault(address);
-  const { stats, commissions, claiming, claimCommissions } = useReferral(address);
+  const { userInfo, loading: userLoading, refresh: refreshUserVault } = useUserVault(address);
+  const { stats, commissions, claiming, claimCommissions, refresh: refreshReferral } = useReferral(address);
+  const { approve, deposit, withdraw, isPending, isConfirming, isSuccess, isError, error: txError, hash } = useVaultActions();
+  
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+
+  // Read USDT balance
+  const { data: usdtBalance, refetch: refetchUsdtBalance } = useBalance({
+    address,
+    token: USDT_ADDRESS,
+    query: {
+      enabled: !!address && isAmoy,
+    },
+  });
+
+  // Read allowance
+  const { data: allowanceData, refetch: refetchAllowance } = useBalance({
+    address,
+    token: USDT_ADDRESS,
+    query: {
+      enabled: !!address,
+    },
+  });
 
   const referralLink = generateReferralLink(address || '');
 
@@ -68,7 +96,7 @@ export function Dashboard() {
     success: t('common.success'),
   } : {
     title: 'Your Dashboard',
-    connectedTo: 'Connected to Polygon',
+    connectedTo: 'Connected to Polygon Amoy',
     yourBalance: 'Your Balance',
     shares: 'shares',
     totalDeposited: 'Total Deposited',
@@ -110,6 +138,36 @@ export function Dashboard() {
     success: 'Success',
   };
 
+  // Check if needs approval - use useMemo instead of useEffect
+  const needsApproval = useMemo(() => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) return false;
+    const currentAllowance = userInfo?.allowance || 0;
+    return currentAllowance < parseFloat(depositAmount);
+  }, [depositAmount, userInfo?.allowance]);
+
+  // Handle transaction success
+  useEffect(() => {
+    if (isSuccess) {
+      setTxStatus('Transaction successful!');
+      setDepositAmount('');
+      setWithdrawAmount('');
+      // Refresh all data
+      refreshUserVault();
+      refreshReferral();
+      refetchUsdtBalance();
+      refetchAllowance();
+      setTimeout(() => setTxStatus(null), 5000);
+    }
+  }, [isSuccess, refreshUserVault, refreshReferral, refetchUsdtBalance, refetchAllowance]);
+
+  // Handle transaction error
+  useEffect(() => {
+    if (isError && txError) {
+      setTxStatus(`Error: ${txError.message || 'Transaction failed'}`);
+      setTimeout(() => setTxStatus(null), 5000);
+    }
+  }, [isError, txError]);
+
   const handleCopyLink = async () => {
     const success = await copyToClipboard(referralLink);
     if (success) {
@@ -118,27 +176,81 @@ export function Dashboard() {
     }
   };
 
+  const handleApprove = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
+    
+    setTxStatus('Approving USDT...');
+    approve(depositAmount);
+  };
+
   const handleDeposit = async () => {
-    console.log('Depositing:', depositAmount);
-    alert(`${text.depositButton} ${depositAmount} USDT! (${text.demo})`);
-    setDepositAmount('');
+    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
+    
+    // Check if needs approval first
+    if (needsApproval) {
+      setTxStatus('Please approve USDT first');
+      return;
+    }
+
+    setTxStatus('Depositing USDT...');
+    
+    // Get referrer from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrer = urlParams.get('ref') || undefined;
+    
+    deposit(depositAmount, referrer);
   };
 
   const handleWithdraw = async () => {
-    console.log('Withdrawing:', withdrawAmount);
-    alert(`${text.withdrawButton} ${withdrawAmount} USDT! (${text.demo})`);
-    setWithdrawAmount('');
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return;
+    
+    setTxStatus('Withdrawing USDT...');
+    withdraw(withdrawAmount);
   };
 
   const handleClaim = async () => {
     const result = await claimCommissions();
     if (result.success) {
-      alert(`${text.success}: $${result.amount?.toFixed(2)}`);
+      setTxStatus(`${text.success}: $${result.amount?.toFixed(2)}`);
+      setTimeout(() => setTxStatus(null), 5000);
     }
   };
 
+  // Get USDT balance display
+  const usdtBalanceDisplay = usdtBalance 
+    ? parseFloat(formatUnits(usdtBalance.value, usdtBalance.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+    : '0';
+
   if (!address) {
     return null;
+  }
+
+  // Show network warning if not on Amoy
+  if (!isAmoy) {
+    return (
+      <section id="dashboard" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-md mx-auto text-center">
+            <Card className="bg-yellow-500/10 border-yellow-500/30">
+              <CardContent className="pt-6">
+                <div className="text-yellow-400 text-lg font-medium mb-2">
+                  Wrong Network
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  Please switch to Polygon Amoy testnet to use the vault.
+                </p>
+                <Button 
+                  onClick={() => {/* Switch network logic */}}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                >
+                  Switch to Amoy
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -151,11 +263,36 @@ export function Dashboard() {
               <h2 className="text-2xl font-bold">{text.title}</h2>
               <p className="text-muted-foreground">{formatAddress(address, 6)}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-sm text-muted-foreground">{text.connectedTo}</span>
+            <div className="flex items-center gap-4">
+              {/* USDT Balance */}
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                <span className="text-green-400 font-semibold">{usdtBalanceDisplay} USDT</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-sm text-muted-foreground">{text.connectedTo}</span>
+              </div>
             </div>
           </div>
+
+          {/* Transaction Status */}
+          {txStatus && (
+            <div className={`mb-6 p-4 rounded-lg ${isSuccess ? 'bg-green-500/10 border border-green-500/20' : isError ? 'bg-red-500/10 border border-red-500/20' : 'bg-blue-500/10 border border-blue-500/20'}`}>
+              <div className={`font-medium ${isSuccess ? 'text-green-400' : isError ? 'text-red-400' : 'text-blue-400'}`}>
+                {txStatus}
+              </div>
+              {hash && (
+                <a 
+                  href={`https://amoy.polygonscan.com/tx/${hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  View on PolygonScan →
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" suppressHydrationWarning>
@@ -265,27 +402,75 @@ export function Dashboard() {
                   <CardTitle>{text.depositTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* USDT Balance */}
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
+                    <span className="text-sm text-muted-foreground">Your USDT Balance:</span>
+                    <span className="font-semibold text-green-400">{usdtBalanceDisplay} USDT</span>
+                  </div>
+                  
                   <div>
                     <Label htmlFor="deposit-amount">{text.depositAmount}</Label>
-                    <Input
-                      id="deposit-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="mt-1.5"
-                    />
+                    <div className="flex gap-2 mt-1.5">
+                      <Input
+                        id="deposit-amount"
+                        type="number"
+                        placeholder="0.00"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="outline"
+                        onClick={() => setDepositAmount(usdtBalanceDisplay.replace(/,/g, ''))}
+                        type="button"
+                      >
+                        MAX
+                      </Button>
+                    </div>
                   </div>
+                  
                   <div className="text-sm text-muted-foreground">
                     <p>• {text.depositFee}</p>
                     <p>• {text.receiveShares}</p>
                   </div>
+                  
+                  {/* Approval needed */}
+                  {needsApproval && depositAmount && parseFloat(depositAmount) > 0 && (
+                    <Button 
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                      onClick={handleApprove}
+                      disabled={isPending || isConfirming}
+                    >
+                      {isPending || isConfirming ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Approving...
+                        </span>
+                      ) : (
+                        '1. Approve USDT First'
+                      )}
+                    </Button>
+                  )}
+                  
                   <Button 
                     className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                     onClick={handleDeposit}
-                    disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || needsApproval || isPending || isConfirming}
                   >
-                    {text.depositButton}
+                    {isPending || isConfirming ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        {needsApproval ? 'Approving...' : 'Depositing...'}
+                      </span>
+                    ) : (
+                      text.depositButton
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -298,28 +483,57 @@ export function Dashboard() {
                   <CardTitle>{text.withdrawTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Vault Balance */}
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
+                    <span className="text-sm text-muted-foreground">Your Vault Balance:</span>
+                    <span className="font-semibold text-purple-400">
+                      {userLoading ? '...' : formatNumber(userInfo?.usdValue || 0, { currency: true })}
+                    </span>
+                  </div>
+                  
                   <div>
                     <Label htmlFor="withdraw-amount">{text.withdrawAmount}</Label>
-                    <Input
-                      id="withdraw-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      className="mt-1.5"
-                    />
+                    <div className="flex gap-2 mt-1.5">
+                      <Input
+                        id="withdraw-amount"
+                        type="number"
+                        placeholder="0.00"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="outline"
+                        onClick={() => setWithdrawAmount(String(userInfo?.usdValue || 0))}
+                        type="button"
+                      >
+                        MAX
+                      </Button>
+                    </div>
                   </div>
+                  
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{text.available}</span>
                     <span>{formatNumber(userInfo?.usdValue || 0, { currency: true })}</span>
                   </div>
+                  
                   <Button 
                     className="w-full"
                     variant="outline"
                     onClick={handleWithdraw}
-                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isPending || isConfirming}
                   >
-                    {text.withdrawButton}
+                    {isPending || isConfirming ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Withdrawing...
+                      </span>
+                    ) : (
+                      text.withdrawButton
+                    )}
                   </Button>
                 </CardContent>
               </Card>
