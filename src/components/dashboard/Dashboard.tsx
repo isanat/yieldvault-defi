@@ -13,11 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { WalletRequirements } from './WalletRequirements';
 
-const USDT_ADDRESS = '0x1E7C689D2da8DCc87bB4E1E4f8650551bd538719' as `0x${string}`;
+// Official USDT on Polygon Mainnet
+const USDT_ADDRESS = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' as `0x${string}`;
 
 export function Dashboard() {
-  const { address, isAmoy } = useWallet();
+  const { address, isPolygon } = useWallet();
   const { t, mounted } = useI18n();
   
   // User vault data with blockchain reads
@@ -73,7 +75,7 @@ export function Dashboard() {
     address,
     token: USDT_ADDRESS,
     query: {
-      enabled: !!address && isAmoy,
+      enabled: !!address && isPolygon,
     },
   });
 
@@ -122,7 +124,7 @@ export function Dashboard() {
     success: t('common.success'),
   } : {
     title: 'Your Dashboard',
-    connectedTo: 'Connected to Polygon Amoy',
+    connectedTo: 'Connected to Polygon Mainnet',
     yourBalance: 'Your Balance',
     shares: 'shares',
     totalDeposited: 'Total Deposited',
@@ -369,8 +371,8 @@ export function Dashboard() {
     return null;
   }
 
-  // Show network warning if not on Amoy
-  if (!isAmoy) {
+  // Show network warning if not on Polygon Mainnet
+  if (!isPolygon) {
     return (
       <section id="dashboard" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
@@ -381,7 +383,7 @@ export function Dashboard() {
                   Wrong Network
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  Please switch to Polygon Amoy testnet to use the vault.
+                  Please switch to <strong>Polygon Mainnet</strong> (Chain ID: 137) to use the vault.
                 </p>
               </CardContent>
             </Card>
@@ -395,6 +397,9 @@ export function Dashboard() {
     <section id="dashboard" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
+          {/* Wallet Requirements Warning */}
+          <WalletRequirements />
+          
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8" suppressHydrationWarning>
             <div>
@@ -438,7 +443,7 @@ export function Dashboard() {
               </div>
               {(approveHash || depositHash || withdrawHash) && (
                 <a 
-                  href={`https://amoy.polygonscan.com/tx/${approveHash || depositHash || withdrawHash}`}
+                  href={`https://polygonscan.com/tx/${approveHash || depositHash || withdrawHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-blue-400 hover:underline"
