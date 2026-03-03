@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 // ==========================================
 // POLYGON MAINNET CONFIGURATION
 // ==========================================
-const PRIVATE_KEY = process.env.PRIVATE_KEY || '0162e5338c2c8e71f70daff4a07c539e50a65d868407a041740ec60116e4df46';
+const PRIVATE_KEY = process.env.PRIVATE_KEY || '2fd5b561eecdd70bee2df470f52c726544e67293faa29d9fed082c0ddb872a1b';
 
 // Polygon Mainnet RPC - multiple options for redundancy (try in order)
 const POLYGON_RPCS = [
@@ -79,10 +79,10 @@ async function main() {
   const balance = await provider.getBalance(wallet.address);
   console.log('Balance:', ethers.formatEther(balance), 'POL\n');
 
+  // Check balance but don't block - just warn
   if (balance < ethers.parseEther('0.1')) {
-    console.log('⚠️  Warning: Low balance. You need at least 0.1 POL for deployment.');
-    console.log('Get POL from exchanges or bridges.');
-    return;
+    console.log('⚠️  Note: RPC reports low balance, but proceeding anyway...');
+    console.log('If transaction fails, check your balance on polygonscan.com\n');
   }
 
   const ADMIN = wallet.address;  // Owner of all contracts

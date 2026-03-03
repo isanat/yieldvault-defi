@@ -76,3 +76,5 @@ export type { IQuickSwapV3Router } from "./contracts/strategies/QuickSwapV3Strat
 export { IQuickSwapV3Router__factory } from "./factories/contracts/strategies/QuickSwapV3Strategy.sol/IQuickSwapV3Router__factory";
 export type { QuickSwapV3Strategy } from "./contracts/strategies/QuickSwapV3Strategy.sol/QuickSwapV3Strategy";
 export { QuickSwapV3Strategy__factory } from "./factories/contracts/strategies/QuickSwapV3Strategy.sol/QuickSwapV3Strategy__factory";
+export type { SimpleStrategy } from "./contracts/strategies/SimpleStrategy";
+export { SimpleStrategy__factory } from "./factories/contracts/strategies/SimpleStrategy__factory";

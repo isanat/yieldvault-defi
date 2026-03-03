@@ -5,3 +5,4 @@ export * as aaveV3StrategySol from "./AaveV3Strategy.sol";
 export * as quickSwapV3StrategySol from "./QuickSwapV3Strategy.sol";
 export { AaveStrategy__factory } from "./AaveStrategy__factory";
 export { QuickSwapStrategy__factory } from "./QuickSwapStrategy__factory";
+export { SimpleStrategy__factory } from "./SimpleStrategy__factory";

@@ -1,0 +1,39 @@
+{
+  "network": "polygon-mainnet",
+  "chainId": 137,
+  "deployer": "0xEf0ECc724C6E98ddc0de274Ce91A1870750F1380",
+  "timestamp": "2025-01-20T00:00:00.000Z",
+  "contracts": {
+    "vault": "0x271Ab56dD3C2EE5b8d268aA56c1DB510b1402EcF",
+    "referral": "0x91aF942211B553AeecC877aEb769a48264AA742E",
+    "config": "0xAe4F3AD2e7f4d3DFE18FB0E852e3CEE0bF3F7c13",
+    "feeDistributor": "0x344f726a284808Ece5D4672120420Ca9f33902a4",
+    "aaveStrategy": "0x5c3d1339f822fb1E1Fd9886F52fDfD98CB0B0D2d",
+    "quickswapStrategy": "0x6894C629655Ef459Af5e779D518Decb11CC81638",
+    "usdt": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+  },
+  "fees": {
+    "performanceFeeBP": 2000,
+    "depositFeeBP": 500,
+    "managementFeeBP": 200
+  },
+  "referralRates": {
+    "level1": 4000,
+    "level2": 2500,
+    "level3": 1500,
+    "level4": 1200,
+    "level5": 800
+  },
+  "strategyAllocations": {
+    "aave": 5000,
+    "quickswap": 5000
+  },
+  "links": {
+    "vault": "https://polygonscan.com/address/0x271Ab56dD3C2EE5b8d268aA56c1DB510b1402EcF",
+    "referral": "https://polygonscan.com/address/0x91aF942211B553AeecC877aEb769a48264AA742E",
+    "config": "https://polygonscan.com/address/0xAe4F3AD2e7f4d3DFE18FB0E852e3CEE0bF3F7c13",
+    "feeDistributor": "https://polygonscan.com/address/0x344f726a284808Ece5D4672120420Ca9f33902a4",
+    "aaveStrategy": "https://polygonscan.com/address/0x5c3d1339f822fb1E1Fd9886F52fDfD98CB0B0D2d",
+    "quickswapStrategy": "https://polygonscan.com/address/0x6894C629655Ef459Af5e779D518Decb11CC81638"
+  }
+}

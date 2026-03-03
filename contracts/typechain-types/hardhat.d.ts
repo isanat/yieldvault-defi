@@ -153,6 +153,10 @@ declare module "hardhat/types/runtime" {
       name: "QuickSwapV3Strategy",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.QuickSwapV3Strategy__factory>;
+    getContractFactory(
+      name: "SimpleStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SimpleStrategy__factory>;
 
     getContractAt(
       name: "AccessControl",
@@ -329,6 +333,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.QuickSwapV3Strategy>;
+    getContractAt(
+      name: "SimpleStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SimpleStrategy>;
 
     deployContract(
       name: "AccessControl",
@@ -470,6 +479,10 @@ declare module "hardhat/types/runtime" {
       name: "QuickSwapV3Strategy",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.QuickSwapV3Strategy>;
+    deployContract(
+      name: "SimpleStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleStrategy>;
 
     deployContract(
       name: "AccessControl",
@@ -646,6 +659,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.QuickSwapV3Strategy>;
+    deployContract(
+      name: "SimpleStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleStrategy>;
 
     // default types
     getContractFactory(

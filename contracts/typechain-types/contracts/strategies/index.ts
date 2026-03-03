@@ -7,3 +7,4 @@ import type * as quickSwapV3StrategySol from "./QuickSwapV3Strategy.sol";
 export type { quickSwapV3StrategySol };
 export type { AaveStrategy } from "./AaveStrategy";
 export type { QuickSwapStrategy } from "./QuickSwapStrategy";
+export type { SimpleStrategy } from "./SimpleStrategy";
