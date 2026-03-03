@@ -254,15 +254,26 @@ export const REFERRAL_ABI = [
   },
 ] as const;
 
-// Contract addresses from environment
+// Contract addresses - Polygon Mainnet (hardcoded as fallback)
+const POLYGON_ADDRESSES = {
+  vault: '0x271Ab56dD3C2EE5b8d268aA56c1DB510b1402EcF' as Address,
+  referral: '0x91aF942211B553AeecC877aEb769a48264AA742E' as Address,
+  config: '0xAe4F3AD2e7f4d3DFE18FB0E852e3CEE0bF3F7c13' as Address,
+  usdt: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' as Address,
+  feeDistributor: '0x344f726a284808Ece5D4672120420Ca9f33902a4' as Address,
+  aaveStrategy: '0x5c3d1339f822fb1E1Fd9886F52fDfD98CB0B0D2d' as Address,
+  quickswapStrategy: '0x6894C629655Ef459Af5e779D518Decb11CC81638' as Address,
+};
+
+// Contract addresses from environment (with hardcoded fallbacks)
 const getAddresses = () => ({
-  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS as Address | undefined,
-  referral: process.env.NEXT_PUBLIC_REFERRAL_ADDRESS as Address | undefined,
-  config: process.env.NEXT_PUBLIC_CONFIG_ADDRESS as Address | undefined,
-  usdt: process.env.NEXT_PUBLIC_USDT_ADDRESS as Address | undefined,
-  feeDistributor: process.env.NEXT_PUBLIC_FEE_DISTRIBUTOR_ADDRESS as Address | undefined,
-  aaveStrategy: process.env.NEXT_PUBLIC_AAVE_STRATEGY_ADDRESS as Address | undefined,
-  quickswapStrategy: process.env.NEXT_PUBLIC_QUICKSWAP_STRATEGY_ADDRESS as Address | undefined,
+  vault: (process.env.NEXT_PUBLIC_VAULT_ADDRESS || POLYGON_ADDRESSES.vault) as Address,
+  referral: (process.env.NEXT_PUBLIC_REFERRAL_ADDRESS || POLYGON_ADDRESSES.referral) as Address,
+  config: (process.env.NEXT_PUBLIC_CONFIG_ADDRESS || POLYGON_ADDRESSES.config) as Address,
+  usdt: (process.env.NEXT_PUBLIC_USDT_ADDRESS || POLYGON_ADDRESSES.usdt) as Address,
+  feeDistributor: (process.env.NEXT_PUBLIC_FEE_DISTRIBUTOR_ADDRESS || POLYGON_ADDRESSES.feeDistributor) as Address,
+  aaveStrategy: (process.env.NEXT_PUBLIC_AAVE_STRATEGY_ADDRESS || POLYGON_ADDRESSES.aaveStrategy) as Address,
+  quickswapStrategy: (process.env.NEXT_PUBLIC_QUICKSWAP_STRATEGY_ADDRESS || POLYGON_ADDRESSES.quickswapStrategy) as Address,
 });
 
 // Create contract instances
