@@ -46,7 +46,7 @@ export function SimpleWalletConnect() {
   const { switchChainAsync } = useSwitchChain();
   
   // Read USDT balance
-  const { data: usdtBalance, refetch: refetchBalance } = useBalance({
+  const { data: usdtBalance, refetch: refetchBalance, isLoading, error: balanceError } = useBalance({
     address,
     token: USDT_ADDRESS,
     query: {
@@ -57,13 +57,35 @@ export function SimpleWalletConnect() {
   const [showModal, setShowModal] = useState(false);
   const isCorrectChain = chain?.id === AMOY_CHAIN_ID;
 
+  // Refetch balance when chain or address changes
+  useEffect(() => {
+    if (address && isCorrectChain) {
+      refetchBalance();
+    }
+  }, [address, isCorrectChain, refetchBalance]);
+
   // Debug logging
   useEffect(() => {
-    console.log('Wallet State:', { isConnected, address, chainId: chain?.id, isCorrectChain });
+    console.log('Wallet State:', { 
+      isConnected, 
+      address, 
+      chainId: chain?.id, 
+      isCorrectChain,
+      usdtBalance: usdtBalance ? {
+        value: usdtBalance.value.toString(),
+        decimals: usdtBalance.decimals,
+        formatted: formatUnits(usdtBalance.value, usdtBalance.decimals)
+      } : null,
+      isLoading,
+      balanceError
+    });
     if (error) {
       console.error('Connection error:', error);
     }
-  }, [isConnected, address, chain, error]);
+    if (balanceError) {
+      console.error('Balance error:', balanceError);
+    }
+  }, [isConnected, address, chain, error, usdtBalance, isLoading, balanceError]);
 
   const handleConnect = (connectorId: string) => {
     const connector = connectors.find(c => c.id === connectorId);
@@ -227,12 +249,18 @@ export function SimpleWalletConnect() {
         </button>
       )}
 
-      {/* USDT Balance */}
-      {isCorrectChain && usdtBalance && (
+      {/* USDT Balance - show on Amoy network */}
+      {isCorrectChain && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-          <span className="text-green-400 font-medium">
-            {parseFloat(formatUnits(usdtBalance.value, usdtBalance.decimals)).toLocaleString()} USDT
-          </span>
+          {isLoading ? (
+            <span className="text-green-400 font-medium">Loading...</span>
+          ) : usdtBalance ? (
+            <span className="text-green-400 font-medium">
+              {parseFloat(formatUnits(usdtBalance.value, usdtBalance.decimals)).toLocaleString()} USDT
+            </span>
+          ) : (
+            <span className="text-green-400 font-medium">0 USDT</span>
+          )}
         </div>
       )}
 
