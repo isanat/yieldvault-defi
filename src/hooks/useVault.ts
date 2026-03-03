@@ -343,7 +343,7 @@ export function useVaultActions() {
   }, [addresses.usdt, addresses.vault, writeApprove]);
 
   // Deposit to vault
-  const deposit = useCallback((amount: string, referrer?: string) => {
+  const deposit = useCallback((amount: string, userAddress: string, referrer?: string) => {
     if (!addresses.vault) {
       console.error('Missing vault address');
       return;
@@ -356,6 +356,7 @@ export function useVaultActions() {
       vault: addresses.vault,
       amount: amount,
       amountBN: amountBN.toString(),
+      receiver: userAddress,
       referrer: referrerAddress
     });
     
@@ -365,7 +366,7 @@ export function useVaultActions() {
       functionName: 'deposit',
       args: [
         amountBN,
-        addresses.vault as `0x${string}`, // receiver
+        userAddress as `0x${string}`, // receiver - should be USER address, not vault
         referrerAddress,
       ],
     });

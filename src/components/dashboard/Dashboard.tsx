@@ -320,7 +320,7 @@ export function Dashboard() {
 
   // Deposit USDT
   const handleDeposit = async () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
+    if (!depositAmount || parseFloat(depositAmount) <= 0 || !address) return;
     
     // Check if needs approval first
     if (needsApproval) {
@@ -334,7 +334,8 @@ export function Dashboard() {
     const urlParams = new URLSearchParams(window.location.search);
     const referrer = urlParams.get('ref') || undefined;
     
-    deposit(depositAmount, referrer);
+    // Pass user address as receiver, then referrer
+    deposit(depositAmount, address, referrer);
   };
 
   // Withdraw USDT
