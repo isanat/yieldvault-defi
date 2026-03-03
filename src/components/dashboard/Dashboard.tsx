@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { useWallet } from '@/contexts/WalletContext';
@@ -19,6 +19,12 @@ import { Label } from '@/components/ui/label';
 const USDT_ADDRESS = '0x1E7C689D2da8DCc87bB4E1E4f8650551bd538719' as `0x${string}`;
 const VAULT_ADDRESS = '0xEB70c71b57F0c4f740c27e39e58eE4D9d59ebf64' as `0x${string}`;
 
+type PendingTransaction = {
+  type: 'deposit' | 'withdraw';
+  amount: string;
+  referrer?: string;
+} | null;
+
 export function Dashboard() {
   const { address, isAmoy } = useWallet();
   const { t, mounted } = useI18n();
@@ -31,6 +37,8 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
   const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [pendingTx, setPendingTx] = useState<PendingTransaction>(null);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Read USDT balance
   const { data: usdtBalance, refetch: refetchUsdtBalance } = useBalance({
@@ -145,25 +153,87 @@ export function Dashboard() {
     return currentAllowance < parseFloat(depositAmount);
   }, [depositAmount, userInfo?.allowance]);
 
-  // Handle transaction success
-  useEffect(() => {
-    if (isSuccess) {
-      setTxStatus('Transaction successful!');
-      setDepositAmount('');
-      setWithdrawAmount('');
-      // Refresh all data
-      refreshUserVault();
-      refreshReferral();
-      refetchUsdtBalance();
-      refetchAllowance();
-      setTimeout(() => setTxStatus(null), 5000);
+  // Record transaction to database
+  const recordTransaction = useCallback(async (
+    type: 'deposit' | 'withdraw',
+    txHash: string,
+    amount: string,
+    referrer?: string
+  ) => {
+    if (!address) return;
+    
+    setIsRecording(true);
+    setTxStatus('Recording transaction to database...');
+    
+    try {
+      const endpoint = type === 'deposit' ? '/api/deposit' : '/api/withdraw';
+      const body = type === 'deposit' 
+        ? { 
+            address, 
+            amount: parseFloat(amount), 
+            txHash,
+            referrerCode: referrer 
+          }
+        : { 
+            address, 
+            shares: parseFloat(amount) / (userInfo?.usdValue || 1) * (userInfo?.shares || 1), // Convert USD to shares
+            txHash 
+          };
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setTxStatus('Transaction recorded successfully!');
+      } else {
+        console.error('Failed to record transaction:', result.error);
+        setTxStatus(`Warning: Blockchain tx confirmed but database record failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error recording transaction:', error);
+      setTxStatus('Warning: Failed to record to database');
+    } finally {
+      setIsRecording(false);
     }
-  }, [isSuccess, refreshUserVault, refreshReferral, refetchUsdtBalance, refetchAllowance]);
+  }, [address, userInfo]);
+
+  // Handle transaction success - record to database
+  useEffect(() => {
+    if (isSuccess && hash && pendingTx) {
+      setTxStatus('Transaction confirmed! Recording to database...');
+      
+      // Record the transaction
+      recordTransaction(
+        pendingTx.type,
+        hash,
+        pendingTx.amount,
+        pendingTx.referrer
+      ).then(() => {
+        setDepositAmount('');
+        setWithdrawAmount('');
+        setPendingTx(null);
+        
+        // Refresh all data
+        refreshUserVault();
+        refreshReferral();
+        refetchUsdtBalance();
+        refetchAllowance();
+        
+        setTimeout(() => setTxStatus(null), 5000);
+      });
+    }
+  }, [isSuccess, hash, pendingTx, recordTransaction, refreshUserVault, refreshReferral, refetchUsdtBalance, refetchAllowance]);
 
   // Handle transaction error
   useEffect(() => {
     if (isError && txError) {
       setTxStatus(`Error: ${txError.message || 'Transaction failed'}`);
+      setPendingTx(null);
       setTimeout(() => setTxStatus(null), 5000);
     }
   }, [isError, txError]);
@@ -192,11 +262,14 @@ export function Dashboard() {
       return;
     }
 
-    setTxStatus('Depositing USDT...');
+    setTxStatus('Confirm deposit in your wallet...');
     
     // Get referrer from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const referrer = urlParams.get('ref') || undefined;
+    
+    // Set pending transaction for later recording
+    setPendingTx({ type: 'deposit', amount: depositAmount, referrer });
     
     deposit(depositAmount, referrer);
   };
@@ -204,7 +277,11 @@ export function Dashboard() {
   const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return;
     
-    setTxStatus('Withdrawing USDT...');
+    setTxStatus('Confirm withdrawal in your wallet...');
+    
+    // Set pending transaction for later recording
+    setPendingTx({ type: 'withdraw', amount: withdrawAmount });
+    
     withdraw(withdrawAmount);
   };
 
@@ -439,7 +516,7 @@ export function Dashboard() {
                     <Button 
                       className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
                       onClick={handleApprove}
-                      disabled={isPending || isConfirming}
+                      disabled={isPending || isConfirming || isRecording}
                     >
                       {isPending || isConfirming ? (
                         <span className="flex items-center gap-2">
@@ -458,15 +535,15 @@ export function Dashboard() {
                   <Button 
                     className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                     onClick={handleDeposit}
-                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || needsApproval || isPending || isConfirming}
+                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || needsApproval || isPending || isConfirming || isRecording}
                   >
-                    {isPending || isConfirming ? (
+                    {isPending || isConfirming || isRecording ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        {needsApproval ? 'Approving...' : 'Depositing...'}
+                        {isRecording ? 'Recording...' : needsApproval ? 'Approving...' : 'Depositing...'}
                       </span>
                     ) : (
                       text.depositButton
@@ -521,15 +598,15 @@ export function Dashboard() {
                     className="w-full"
                     variant="outline"
                     onClick={handleWithdraw}
-                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isPending || isConfirming}
+                    disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isPending || isConfirming || isRecording}
                   >
-                    {isPending || isConfirming ? (
+                    {isPending || isConfirming || isRecording ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Withdrawing...
+                        {isRecording ? 'Recording...' : 'Withdrawing...'}
                       </span>
                     ) : (
                       text.withdrawButton
