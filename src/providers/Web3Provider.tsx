@@ -40,7 +40,6 @@ const POLYGON_RPC_URLS = [
   'https://1rpc.io/matic',
   'https://rpc.ankr.com/polygon',
   'https://matic-mainnet.chainstacklabs.com',
-  'https://polygon-rpc.com',
 ];
 
 // Lista de RPCs para Polygon Amoy (testnet)
