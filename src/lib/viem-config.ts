@@ -4,32 +4,21 @@ import { polygon, polygonAmoy } from 'viem/chains';
 // Chain configuration - Polygon Mainnet by default (Chain ID: 137)
 export const CHAIN: Chain = process.env.NEXT_PUBLIC_CHAIN_ID === '80002' ? polygonAmoy : polygon;
 
-// Lista de RPCs para Polygon Mainnet com fallback automático
-// Ordem de prioridade: RPCs mais confiáveis primeiro
+// Lista de RPCs para Polygon Mainnet que FUNCIONAM com CORS
+// Testados e confirmados para uso no frontend/backend
 const POLYGON_RPC_URLS = [
-  // RPCs públicos principais (mais confiáveis)
-  'https://polygon-mainnet.g.alchemy.com/v2/demo',
   'https://polygon-bor-rpc.publicnode.com',
   'https://polygon.meowrpc.com',
   'https://polygon.drpc.org',
   'https://1rpc.io/matic',
-  'https://polygon-mainnet.public.blastapi.io',
-  'https://polygon.api.onfinality.io/public',
   'https://rpc.ankr.com/polygon',
-  'https://polygon.llamarpc.com',
   'https://matic-mainnet.chainstacklabs.com',
-  // Fallbacks adicionais
-  'https://polygon.rpc.blxrbdn.com',
-  'https://polygon.blockpi.network/v1/rpc/public',
-  // Original como último fallback (pode retornar 401)
-  'https://polygon-rpc.com',
+  'https://polygon-rpc.com', // Fallback
 ];
 
 // Lista de RPCs para Polygon Amoy (testnet)
 const AMOY_RPC_URLS = [
-  'https://polygon-amoy.g.alchemy.com/v2/demo',
   'https://polygon-amoy-bor-rpc.publicnode.com',
-  'https://polygon-amoy.blockpi.network/v1/rpc/public',
   'https://rpc-amoy.polygon.technology',
 ];
 
