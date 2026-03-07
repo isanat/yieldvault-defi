@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 
+// Admin addresses - case insensitive comparison
 const ADMIN_ADDRESSES = [
-  '0x013a76c9cffd56da842b97bf7ac1bc3c05269c42', // Owner address
+  '0x013a76C9CfFD56DA842b97bF7AC1Bc3C05269C42', // Owner address (case preserved)
 ].map(a => a.toLowerCase());
 
 export function useAdminAuth() {
@@ -18,6 +19,7 @@ export function useAdminAuth() {
     const storedKey = localStorage.getItem('adminApiKey');
     if (storedKey) {
       setAdminApiKey(storedKey);
+      setIsAdmin(true);
     }
     
     setIsLoading(false);
@@ -25,10 +27,16 @@ export function useAdminAuth() {
 
   useEffect(() => {
     // Check if address is in admin list
-    if (address) {
-      setIsAdmin(ADMIN_ADDRESSES.includes(address.toLowerCase()));
+    if (address && !adminApiKey) {
+      const isAddressAdmin = ADMIN_ADDRESSES.includes(address.toLowerCase());
+      console.log('Admin check:', {
+        address: address.toLowerCase(),
+        adminAddresses: ADMIN_ADDRESSES,
+        isAdmin: isAddressAdmin
+      });
+      setIsAdmin(isAddressAdmin);
     }
-  }, [address]);
+  }, [address, adminApiKey]);
 
   const setApiKey = (key: string) => {
     localStorage.setItem('adminApiKey', key);
