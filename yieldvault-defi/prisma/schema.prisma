@@ -1,0 +1,261 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER MODELS ====================
+
+/// User wallet addresses and their associated data
+model User {
+  id                  String   @id @default(cuid())
+  address             String   @unique
+  referrerId          String?
+  referrer            User?    @relation("ReferralTree", fields: [referrerId], references: [id], onDelete: SetNull)
+  referrals           User[]   @relation("ReferralTree")
+  
+  totalDeposited      Float    @default(0)
+  totalWithdrawn      Float    @default(0)
+  currentShares       Float    @default(0)
+  totalEarnings       Float    @default(0)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  lastActivityAt      DateTime @default(now())
+  acceptedTermsAt     DateTime?
+  
+  deposits            Deposit[]
+  withdrawals         Withdrawal[]
+  commissions         ReferralCommission[]
+  transactions        Transaction[]
+  referralSnapshots   ReferralSnapshot[]
+  
+  @@index([address])
+  @@index([referrerId])
+}
+
+model VaultSnapshot {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique
+  
+  tvl                 Float
+  totalShares         Float
+  sharePrice          Float
+  totalUsers          Int
+  
+  dailyProfit         Float    @default(0)
+  dailyApy            Float    @default(0)
+  strategyAllocations String?
+  
+  createdAt           DateTime @default(now())
+  
+  @@index([date])
+}
+
+model HarvestEvent {
+  id              String   @id @default(cuid())
+  txHash          String   @unique
+  timestamp       DateTime @default(now())
+  
+  totalProfit     Float
+  performanceFee  Float
+  netProfit       Float
+  strategyProfits String?
+  gasUsed         Int?
+  gasPrice        Float?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([timestamp])
+}
+
+model Deposit {
+  id              String   @id @default(cuid())
+  txHash          String   @unique
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount          Float
+  shares          Float
+  sharePrice      Float
+  feeAmount       Float    @default(0)
+  referrerAddress String?
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model Withdrawal {
+  id         String   @id @default(cuid())
+  txHash     String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  shares     Float
+  amount     Float
+  sharePrice Float
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  txHash      String   @unique
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String
+  amount      Float    @default(0)
+  data        String?
+  status      String   @default("pending")
+  blockNumber Int?
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([type])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model ReferralCommission {
+  id              String   @id @default(cuid())
+  txHash          String?
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  fromUserId      String?
+  level           Int
+  commissionType  String
+  amount          Float
+  status          String   @default("pending")
+  claimedAt       DateTime?
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([fromUserId])
+  @@index([commissionType])
+}
+
+model ReferralSnapshot {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                DateTime
+  
+  totalReferrals      Int      @default(0)
+  activeReferrals     Int      @default(0)
+  totalReferredVolume Float    @default(0)
+  totalCommissions    Float    @default(0)
+  
+  level1Count Int @default(0)
+  level2Count Int @default(0)
+  level3Count Int @default(0)
+  level4Count Int @default(0)
+  level5Count Int @default(0)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AdminLog {
+  id           String   @id @default(cuid())
+  adminAddress String
+  action       String
+  details      String?
+  txHash       String?
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([adminAddress])
+  @@index([timestamp])
+}
+
+model Strategy {
+  id             String    @id @default(cuid())
+  address        String    @unique
+  name           String
+  description    String?
+  allocation     Float     @default(0)
+  isActive       Boolean   @default(true)
+  totalDeposited Float     @default(0)
+  totalProfit    Float     @default(0)
+  lastHarvestAt  DateTime?
+  snapshots      StrategySnapshot[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([address])
+}
+
+model StrategySnapshot {
+  id          String   @id @default(cuid())
+  strategyId  String
+  strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  date        DateTime
+  
+  tvl         Float    @default(0)
+  dailyProfit Float    @default(0)
+  apy         Float    @default(0)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([strategyId, date])
+  @@index([strategyId])
+}
+
+model ApiKey {
+  id           String    @id @default(cuid())
+  key          String    @unique
+  name         String?
+  isActive     Boolean   @default(true)
+  rateLimit    Int       @default(100)
+  requestCount Int       @default(0)
+  lastRequestAt DateTime?
+  
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+}
+
+model BotExecution {
+  id        String   @id @default(cuid())
+  botName   String
+  status    String
+  txHash    String?
+  gasUsed   Int?
+  error     String?
+  details   String?
+  
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([botName])
+  @@index([timestamp])
+}
