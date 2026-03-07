@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 
-// Admin addresses - case insensitive comparison
-const ADMIN_ADDRESSES = [
-  '0x013a76C9CfFD56DA842b97bF7AC1Bc3C05269C42', // Owner address (case preserved)
-].map(a => a.toLowerCase());
+// Owner address from deployment - Polygon Mainnet
+const OWNER_ADDRESS = '0x013a76C9CfFD56DA842b97bF7AC1Bc3C05269C42'.toLowerCase();
 
 export function useAdminAuth() {
   const { address, isConnected } = useAccount();
@@ -16,41 +14,58 @@ export function useAdminAuth() {
 
   useEffect(() => {
     // Check localStorage for API key
-    const storedKey = localStorage.getItem('adminApiKey');
-    if (storedKey) {
-      setAdminApiKey(storedKey);
-      setIsAdmin(true);
+    try {
+      const storedKey = localStorage.getItem('adminApiKey');
+      if (storedKey) {
+        setAdminApiKey(storedKey);
+        setIsAdmin(true);
+      }
+    } catch (e) {
+      console.error('Error reading localStorage:', e);
     }
     
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    // Check if address is in admin list
-    if (address && !adminApiKey) {
-      const isAddressAdmin = ADMIN_ADDRESSES.includes(address.toLowerCase());
-      console.log('Admin check:', {
-        address: address.toLowerCase(),
-        adminAddresses: ADMIN_ADDRESSES,
-        isAdmin: isAddressAdmin
+    // Check if connected address matches owner
+    if (address && isConnected) {
+      const isOwner = address.toLowerCase() === OWNER_ADDRESS;
+      console.log('Admin auth check:', {
+        connectedAddress: address.toLowerCase(),
+        ownerAddress: OWNER_ADDRESS,
+        isMatch: isOwner,
+        hasApiKey: !!adminApiKey
       });
-      setIsAdmin(isAddressAdmin);
+      
+      // If no API key set, check address
+      if (!adminApiKey) {
+        setIsAdmin(isOwner);
+      }
     }
-  }, [address, adminApiKey]);
+  }, [address, isConnected, adminApiKey]);
 
   const setApiKey = (key: string) => {
-    localStorage.setItem('adminApiKey', key);
-    setAdminApiKey(key);
-    setIsAdmin(true);
+    try {
+      localStorage.setItem('adminApiKey', key);
+      setAdminApiKey(key);
+      setIsAdmin(true);
+    } catch (e) {
+      console.error('Error saving to localStorage:', e);
+    }
   };
 
   const clearApiKey = () => {
-    localStorage.removeItem('adminApiKey');
-    setAdminApiKey(null);
-    setIsAdmin(false);
+    try {
+      localStorage.removeItem('adminApiKey');
+      setAdminApiKey(null);
+      setIsAdmin(false);
+    } catch (e) {
+      console.error('Error clearing localStorage:', e);
+    }
   };
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): Record<string, string> => {
     if (adminApiKey) {
       return { Authorization: `Bearer ${adminApiKey}` };
     }
