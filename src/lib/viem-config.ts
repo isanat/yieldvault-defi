@@ -4,20 +4,24 @@ import { polygon, polygonAmoy } from 'viem/chains';
 // Chain configuration - Polygon Mainnet by default (Chain ID: 137)
 export const CHAIN: Chain = process.env.NEXT_PUBLIC_CHAIN_ID === '80002' ? polygonAmoy : polygon;
 
-// Lista de RPCs para Polygon Mainnet que FUNCIONAM com CORS
-// Testados e confirmados para uso no frontend/backend
+// Alchemy API Key
+const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '2iPG0kfpRgPxYyu6I4ypv';
+
+// Lista de RPCs para Polygon Mainnet com fallback automático
 const POLYGON_RPC_URLS = [
+  `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
   'https://polygon-bor-rpc.publicnode.com',
   'https://polygon.meowrpc.com',
   'https://polygon.drpc.org',
   'https://1rpc.io/matic',
   'https://rpc.ankr.com/polygon',
   'https://matic-mainnet.chainstacklabs.com',
-  'https://polygon-rpc.com', // Fallback
+  'https://polygon-rpc.com',
 ];
 
 // Lista de RPCs para Polygon Amoy (testnet)
 const AMOY_RPC_URLS = [
+  `https://polygon-amoy.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
   'https://polygon-amoy-bor-rpc.publicnode.com',
   'https://rpc-amoy.polygon.technology',
 ];
@@ -26,15 +30,15 @@ const AMOY_RPC_URLS = [
 function createFallbackTransport(urls: string[]) {
   const transports = urls.map(url => 
     http(url, {
-      timeout: 15_000, // 15 segundos timeout
+      timeout: 15_000,
       retryCount: 2,
       retryDelay: 1000,
     })
   );
 
   return fallback(transports, {
-    rank: true, // Rankear por latência automaticamente
-    retryCount: 3, // Número de tentativas antes de falhar
+    rank: true,
+    retryCount: 3,
     retryDelay: 1000,
   });
 }

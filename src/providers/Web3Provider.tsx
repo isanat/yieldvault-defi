@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 3,
       retryDelay: 1000,
-      staleTime: 30000, // 30 segundos
+      staleTime: 30000,
       refetchOnWindowFocus: false,
     },
   },
@@ -21,21 +21,26 @@ const queryClient = new QueryClient({
 // WalletConnect Project ID
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '9a9a4ec5bde3ebded3da0745fbb6cad3';
 
-// Lista de RPCs para Polygon Mainnet que FUNCIONAM com CORS no navegador
-// Testados e confirmados para uso no frontend
+// Alchemy API Key
+const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '2iPG0kfpRgPxYyu6I4ypv';
+
+// Lista de RPCs para Polygon Mainnet com fallback automático
 const POLYGON_RPC_URLS = [
-  // RPCs públicos com suporte CORS confirmado
+  // Alchemy (prioridade com API key própria)
+  `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+  // RPCs públicos com CORS habilitado
   'https://polygon-bor-rpc.publicnode.com',
   'https://polygon.meowrpc.com',
   'https://polygon.drpc.org',
   'https://1rpc.io/matic',
   'https://rpc.ankr.com/polygon',
   'https://matic-mainnet.chainstacklabs.com',
-  'https://polygon-rpc.com', // Pode ter problemas mas é fallback
+  'https://polygon-rpc.com',
 ];
 
-// Lista de RPCs para Polygon Amoy (testnet) com CORS
+// Lista de RPCs para Polygon Amoy (testnet)
 const AMOY_RPC_URLS = [
+  `https://polygon-amoy.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
   'https://polygon-amoy-bor-rpc.publicnode.com',
   'https://rpc-amoy.polygon.technology',
 ];
@@ -51,7 +56,7 @@ function createFallbackTransport(urls: string[]) {
   );
 
   return fallback(transports, {
-    rank: true, // Rankear por latência automaticamente
+    rank: true,
     retryCount: 3,
     retryDelay: 1000,
   });
