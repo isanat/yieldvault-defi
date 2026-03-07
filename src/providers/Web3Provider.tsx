@@ -24,10 +24,15 @@ const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '9a9a4ec5
 // Alchemy API Key
 const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '2iPG0kfpRgPxYyu6I4ypv';
 
+// Ankr API Key
+const ANKR_API_KEY = process.env.NEXT_PUBLIC_ANKR_API_KEY || '6673d083f45b6d93b0f631e42b72f1ab9f223195a479135ab2f882e3bcf1e2c2';
+
 // Lista de RPCs para Polygon Mainnet com fallback automático
 const POLYGON_RPC_URLS = [
   // Alchemy (prioridade com API key própria)
   `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+  // Ankr Premium (API key própria)
+  `https://rpc.ankr.com/multichain/${ANKR_API_KEY}`,
   // RPCs públicos com CORS habilitado
   'https://polygon-bor-rpc.publicnode.com',
   'https://polygon.meowrpc.com',

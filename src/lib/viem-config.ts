@@ -7,9 +7,13 @@ export const CHAIN: Chain = process.env.NEXT_PUBLIC_CHAIN_ID === '80002' ? polyg
 // Alchemy API Key
 const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '2iPG0kfpRgPxYyu6I4ypv';
 
+// Ankr API Key
+const ANKR_API_KEY = process.env.NEXT_PUBLIC_ANKR_API_KEY || '6673d083f45b6d93b0f631e42b72f1ab9f223195a479135ab2f882e3bcf1e2c2';
+
 // Lista de RPCs para Polygon Mainnet com fallback automático
 const POLYGON_RPC_URLS = [
   `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+  `https://rpc.ankr.com/multichain/${ANKR_API_KEY}`,
   'https://polygon-bor-rpc.publicnode.com',
   'https://polygon.meowrpc.com',
   'https://polygon.drpc.org',
