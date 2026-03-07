@@ -35,7 +35,6 @@ const POLYGON_RPC_URLS = [
   `https://rpc.ankr.com/multichain/${ANKR_API_KEY}`,
   // RPCs públicos com CORS habilitado
   'https://polygon-bor-rpc.publicnode.com',
-  'https://polygon.meowrpc.com',
   'https://polygon.drpc.org',
   'https://1rpc.io/matic',
   'https://rpc.ankr.com/polygon',

@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { formatUnits } from 'viem';
 import { X, Wallet, ChevronRight } from 'lucide-react';
 
-const AMOY_CHAIN_ID = 80002;
-const USDT_ADDRESS = '0x1E7C689D2da8DCc87bB4E1E4f8650551bd538719' as `0x${string}`;
+const POLYGON_CHAIN_ID = 137;
+const USDT_ADDRESS = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' as `0x${string}`;
 
 // MetaMask SVG Icon
 const MetaMaskIcon = () => (
@@ -55,7 +55,7 @@ export function SimpleWalletConnect() {
   });
 
   const [showModal, setShowModal] = useState(false);
-  const isCorrectChain = chain?.id === AMOY_CHAIN_ID;
+  const isCorrectChain = chain?.id === POLYGON_CHAIN_ID;
 
   // Refetch balance when chain or address changes
   useEffect(() => {
@@ -97,7 +97,7 @@ export function SimpleWalletConnect() {
 
   const handleSwitchNetwork = async () => {
     try {
-      await switchChainAsync?.({ chainId: AMOY_CHAIN_ID });
+      await switchChainAsync?.({ chainId: POLYGON_CHAIN_ID });
     } catch (err) {
       console.error('Failed to switch network:', err);
     }
@@ -245,11 +245,11 @@ export function SimpleWalletConnect() {
           onClick={handleSwitchNetwork}
           className="text-xs text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-lg hover:bg-yellow-500/20"
         >
-          Switch to Amoy
+          Switch to Polygon
         </button>
       )}
 
-      {/* USDT Balance - show on Amoy network */}
+      {/* USDT Balance - show on Polygon network */}
       {isCorrectChain && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
           {isLoading ? (
