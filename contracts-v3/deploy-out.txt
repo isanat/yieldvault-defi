@@ -1,0 +1,18 @@
+=== YIELDVAULT V3 DEPLOY ===
+Time: 2026-03-11T00:45:36.002Z
+RPC: https://polygon.api.onfinality.io/public
+Block: 84034951
+Deployer: 0xc7284fEc59a599C49889DD8532b4de7Db81b0340
+Balance: 3.013635726300514176 MATIC
+Latest nonce: 9
+Pending nonce: 10
+WARNING: 1 pending txs detected!
+Attempting to cancel pending transactions...
+Cancel gas price: 187.2383101 gwei
+Canceling nonce 9...
+Error canceling nonce 9: nonce has already been used (transaction="0x02f86d818909852b9845e0d4852b9845e0d482520894c7284fec59a599c49889dd8532b4de7db81b03408080c080a0f5ed78d7ae16e70d4cbbc83a1caf8cf4b67cfff1db93d236ebad98c7116071f7a00fa79573a930fcd540320f1a9f46b6b1a044e63fcbf3bee53a7b091570775af0", info={ "error": { "code": -32000, "message": "nonce too low: next nonce 10, tx nonce 9" } }, code=NONCE_EXPIRED, version=6.16.0)
+Starting nonce: 10
+Gas price: 162.732512292 gwei
+
+[1/4] Deploying ReferralV3...
+ReferralV3 tx: 0xfac66b7e092bb15b8e2e6885cfa630699f0030caa7f9185e8c20b1324520e440

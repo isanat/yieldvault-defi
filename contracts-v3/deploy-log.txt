@@ -1,0 +1,49 @@
+=== YIELDVAULT V3 DEPLOY ===
+Time: 2026-03-11T00:45:36.002Z
+RPC: https://polygon.api.onfinality.io/public
+Block: 84034951
+Deployer: 0xc7284fEc59a599C49889DD8532b4de7Db81b0340
+Balance: 3.013635726300514176 MATIC
+Latest nonce: 9
+Pending nonce: 10
+WARNING: 1 pending txs detected!
+Attempting to cancel pending transactions...
+YieldVaultV3: 0x6565D903E231F8B15283d2a33fe736498DC4b7E6
+
+========== DEPLOY COMPLETED ==========
+ConfigV3:              0xc7Ab7cE286906B21410201322EdC34faD144a661
+ReferralV3:            0xe09b20b36165fFa9203ca4757bE56562265fD9fd
+FeeDistributorV3:      0x55D151794bA83cFF8b76452f7A7451f4C4C8cd08
+LocalStrategyManagerV3: 0xC12f26E8fC654e49cCe589B37EfEB07c23cbC97b
+YieldVaultV3:          0x6565D903E231F8B15283d2a33fe736498DC4b7E6
+
+Polygonscan:
+https://polygonscan.com/address/0xc7Ab7cE286906B21410201322EdC34faD144a661
+https://polygonscan.com/address/0xe09b20b36165fFa9203ca4757bE56562265fD9fd
+Done!
+Cancel gas price: 187.2383101 gwei
+Canceling nonce 9...
+Error canceling nonce 9: nonce has already been used (transaction="0x02f86d818909852b9845e0d4852b9845e0d482520894c7284fec59a599c49889dd8532b4de7db81b03408080c080a0f5ed78d7ae16e70d4cbbc83a1caf8cf4b67cfff1db93d236ebad98c7116071f7a00fa79573a930fcd540320f1a9f46b6b1a044e63fcbf3bee53a7b091570775af0", info={ "error": { "code": -32000, "message": "nonce too low: next nonce 10, tx nonce 9" } }, code=NONCE_EXPIRED, version=6.16.0)
+Starting nonce: 10
+Gas price: 162.732512292 gwei
+
+[1/4] Deploying ReferralV3...
+ReferralV3 tx: 0xfac66b7e092bb15b8e2e6885cfa630699f0030caa7f9185e8c20b1324520e440
+LocalStrategyManagerV3 tx: 0x5aad92ed7a70e6040ad34b79ea5683689fddcd1615ac53a75fd056460dfc4ef1
+LocalStrategyManagerV3: 0x4529c00dF83c69362163E560930c6bF5fFC8B2b5
+
+[4/4] Deploying YieldVaultV3...
+YieldVaultV3 tx: 0x260f6282f886596435e2488168c6ae179a31114d37fc3c9949e6c6882daa6333
+YieldVaultV3: 0x2403941F02D0a4b846913562f3edE91518b8afDA
+
+========== DEPLOY COMPLETED ==========
+ConfigV3:              0xc7Ab7cE286906B21410201322EdC34faD144a661
+ReferralV3:            0x5cEC474D051e45De04A73eB66182D7f6342186a9
+FeeDistributorV3:      0x697FEa3456B2535AE27a96266F98D31FF94d41De
+LocalStrategyManagerV3: 0x4529c00dF83c69362163E560930c6bF5fFC8B2b5
+YieldVaultV3:          0x2403941F02D0a4b846913562f3edE91518b8afDA
+
+Polygonscan:
+https://polygonscan.com/address/0xc7Ab7cE286906B21410201322EdC34faD144a661
+https://polygonscan.com/address/0x5cEC474D051e45De04A73eB66182D7f6342186a9
+Done!
