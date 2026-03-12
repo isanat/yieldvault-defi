@@ -279,6 +279,18 @@ export const translations: Record<Language, Record<string, string>> = {
     'contract.timelock': 'Timelock',
     'contract.aaveStrategy': 'Aave Strategy',
     'contract.quickswapStrategy': 'QuickSwap Strategy',
+    'contract.strategyController': 'Strategy Controller',
+    'contract.stableLpStrategy': 'Stable LP Strategy',
+    'contract.address': 'Address',
+
+    // Strategies additional
+    'strategies.allocation': 'Allocation',
+    'strategies.active': 'Active Strategies',
+    'strategies.activeCount': 'Active',
+    'strategies.controllerDesc': 'Strategy allocation manager',
+
+    // Contracts section
+    'contracts.onPolygon': 'All contracts verified on Polygon Mainnet',
   },
 
   'pt-BR': {
@@ -551,6 +563,18 @@ export const translations: Record<Language, Record<string, string>> = {
     'contract.timelock': 'Timelock',
     'contract.aaveStrategy': 'Estratégia Aave',
     'contract.quickswapStrategy': 'Estratégia QuickSwap',
+    'contract.strategyController': 'Controlador de Estratégias',
+    'contract.stableLpStrategy': 'Estratégia Stable LP',
+    'contract.address': 'Endereço',
+
+    // Strategies additional
+    'strategies.allocation': 'Alocação',
+    'strategies.active': 'Estratégias Ativas',
+    'strategies.activeCount': 'Ativas',
+    'strategies.controllerDesc': 'Gerenciador de alocação de estratégias',
+
+    // Contracts section
+    'contracts.onPolygon': 'Todos os contratos verificados na Polygon Mainnet',
   },
 
   es: {

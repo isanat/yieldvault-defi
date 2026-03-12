@@ -16,12 +16,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,6 +56,9 @@ import {
   Database,
   Network,
   Link2,
+  Info,
+  Gauge,
+  LineChart,
 } from 'lucide-react'
 import { toast, Toaster } from 'sonner'
 import { useTranslation, languages } from '@/lib/i18n'
@@ -161,29 +158,6 @@ export default function YieldVaultApp() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
-  // Stats from real data
-  const stats = protocolData?.stats || {
-    tvlFormatted: 'Carregando...',
-    users: 0,
-    avgAPY: '0',
-    totalPaidOut: 'Carregando...',
-  }
-
-  const fees = protocolData?.fees || {
-    performanceFeeBP: 0,
-    depositFeeBP: 0,
-    managementFeeBP: 0,
-    withdrawalFeeBP: 0,
-  }
-
-  const strategies = protocolData?.strategies || {
-    aaveLoop: { apy: '8', risk: 'Médio', isActive: true },
-    stableLp: { apy: '15', risk: 'Médio-Baixo', isActive: true },
-  }
-
-  const contracts = protocolData?.contracts || {}
-  const referralRates = protocolData?.referralRates || [4000, 2500, 1500, 1200, 800]
-
   return (
     <div className="min-h-screen bg-gray-950">
       <Toaster position="top-right" />
@@ -262,7 +236,7 @@ export default function YieldVaultApp() {
             <Button
               className={`bg-gradient-to-r ${COLORS.gradient} hover:opacity-90`}
               onClick={() => {
-                toast.info('Deposit functionality requires wallet signature')
+                toast.info('Funcionalidade de depósito requer assinatura da carteira')
                 setDepositDialog(false)
               }}
             >
@@ -303,7 +277,7 @@ export default function YieldVaultApp() {
             <Button
               className={`bg-gradient-to-r ${COLORS.gradient} hover:opacity-90`}
               onClick={() => {
-                toast.info('Withdraw functionality requires wallet signature')
+                toast.info('Funcionalidade de saque requer assinatura da carteira')
                 setWithdrawDialog(false)
               }}
             >
@@ -397,8 +371,8 @@ function LandingPage({
   const stats = protocolData?.stats || { tvlFormatted: '...', users: 0, avgAPY: '...', totalPaidOut: '...' }
   const fees = protocolData?.fees || { performanceFeeBP: 2000, depositFeeBP: 500, managementFeeBP: 200, withdrawalFeeBP: 0 }
   const strategies = protocolData?.strategies || { 
-    aaveLoop: { apy: '8', risk: 'Médio', expectedApy: '8-15%' }, 
-    stableLp: { apy: '15', risk: 'Médio-Baixo', expectedApy: '12-25%' } 
+    aaveLoop: { apy: '8', risk: t('strategies.aave.riskLevel'), expectedApy: '8-15%' }, 
+    stableLp: { apy: '15', risk: t('strategies.quickswap.riskLevel'), expectedApy: '12-25%' } 
   }
   const contracts = protocolData?.contracts || {}
   const referralRates = protocolData?.referralRates || [4000, 2500, 1500, 1200, 800]
@@ -424,16 +398,16 @@ function LandingPage({
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">YieldVault</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">DeFi Yield Optimizer • V3</p>
+                <p className="text-xs text-gray-500 hidden sm:block">{t('hero.badge')}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-6 text-sm" suppressHydrationWarning>
                 <a href="#features" className="text-gray-400 hover:text-white transition-colors">{t('nav.features')}</a>
-                <a href="#strategies" className="text-gray-400 hover:text-white transition-colors">Estratégias</a>
+                <a href="#strategies" className="text-gray-400 hover:text-white transition-colors">{t('strategies.title')}</a>
                 <a href="#security" className="text-gray-400 hover:text-white transition-colors">{t('nav.security')}</a>
-                <a href="#contracts" className="text-gray-400 hover:text-white transition-colors">Contratos</a>
+                <a href="#contracts" className="text-gray-400 hover:text-white transition-colors">{t('security.contracts.title')}</a>
               </div>
 
               {/* Language Selector */}
@@ -479,7 +453,7 @@ function LandingPage({
                       className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
                     >
                       <AlertTriangle className="w-4 h-4 mr-2" />
-                      Trocar Rede
+                      {t('wallet.switchNetwork')}
                     </Button>
                   )}
                   <Button
@@ -515,7 +489,7 @@ function LandingPage({
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10">
             <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2">
               <AlertTriangle className="w-4 h-4 mr-2" />
-              Protocolo Pausado
+              {t('security.pausable.title')}
             </Badge>
           </div>
         )}
@@ -530,7 +504,7 @@ function LandingPage({
             <motion.div variants={staggerItem} className="flex justify-center mb-8">
               <Badge className={`bg-purple-500/10 text-purple-400 border-purple-500/30 px-4 py-2 text-sm`}>
                 <Zap className="w-4 h-4 mr-2" />
-                Polygon Mainnet • Sistema V3
+                {t('hero.badge')}
               </Badge>
             </motion.div>
 
@@ -668,8 +642,8 @@ function LandingPage({
             viewport={{ once: true }}
           >
             <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">Estratégias Ativas</h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">Alocação inteligente entre estratégias reais deployadas na Polygon</p>
+              <h2 className="text-4xl font-bold text-white mb-4">{t('strategies.title')}</h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">{t('strategies.subtitle')}</p>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -683,32 +657,32 @@ function LandingPage({
                           <Globe className="w-8 h-8 text-blue-400" />
                         </div>
                         <div>
-                          <CardTitle className="text-white text-xl">Aave V3 Loop</CardTitle>
+                          <CardTitle className="text-white text-xl">{t('strategies.aave.title')}</CardTitle>
                           <Badge className="bg-green-500/20 text-green-400 mt-1">
-                            <CheckCircle className="w-3 h-3 mr-1" /> Ativa
+                            <CheckCircle className="w-3 h-3 mr-1" /> {t('strategies.aave.badge')}
                           </Badge>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-blue-400">50%</p>
-                        <p className="text-xs text-gray-500">Alocação</p>
+                        <p className="text-xs text-gray-500">{t('strategies.allocation')}</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 mb-4">Estratégia de lending com alavancagem no Aave V3. Baixo risco, retornos consistentes através de loops de empréstimo.</p>
+                    <p className="text-gray-400 mb-4">{t('strategies.aave.description')}</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="p-3 bg-gray-900/50 rounded-xl">
-                        <p className="text-sm text-gray-500">APY Esperado</p>
-                        <p className="text-xl font-bold text-blue-400">8-15%</p>
+                        <p className="text-sm text-gray-500">{t('strategies.aave.apy')}</p>
+                        <p className="text-xl font-bold text-blue-400">{STRATEGY_CONFIG.aaveLoop.expectedApy}</p>
                       </div>
                       <div className="p-3 bg-gray-900/50 rounded-xl">
-                        <p className="text-sm text-gray-500">Risco</p>
-                        <p className="text-xl font-bold text-yellow-400">Médio</p>
+                        <p className="text-sm text-gray-500">{t('strategies.aave.risk')}</p>
+                        <p className="text-xl font-bold text-yellow-400">{t('strategies.aave.riskLevel')}</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Endereço:</span>
+                      <span className="text-gray-500">{t('contract.address')}:</span>
                       <div className="flex items-center gap-2">
                         <code className="text-gray-300 text-xs">{V3_CONTRACTS.aaveLoopStrategy.slice(0, 10)}...</code>
                         <Button 
@@ -735,32 +709,32 @@ function LandingPage({
                           <PieChart className="w-8 h-8 text-fuchsia-400" />
                         </div>
                         <div>
-                          <CardTitle className="text-white text-xl">Stable LP + Lending</CardTitle>
+                          <CardTitle className="text-white text-xl">{t('strategies.quickswap.title')}</CardTitle>
                           <Badge className="bg-green-500/20 text-green-400 mt-1">
-                            <CheckCircle className="w-3 h-3 mr-1" /> Ativa
+                            <CheckCircle className="w-3 h-3 mr-1" /> {t('strategies.quickswap.badge')}
                           </Badge>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-fuchsia-400">50%</p>
-                        <p className="text-xs text-gray-500">Alocação</p>
+                        <p className="text-xs text-gray-500">{t('strategies.allocation')}</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 mb-4">LP de stablecoins no QuickSwap V3 + lending no Aave. Maiores retornos com gestão ativa de posições.</p>
+                    <p className="text-gray-400 mb-4">{t('strategies.quickswap.description')}</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="p-3 bg-gray-900/50 rounded-xl">
-                        <p className="text-sm text-gray-500">APY Esperado</p>
-                        <p className="text-xl font-bold text-fuchsia-400">12-25%</p>
+                        <p className="text-sm text-gray-500">{t('strategies.aave.apy')}</p>
+                        <p className="text-xl font-bold text-fuchsia-400">{STRATEGY_CONFIG.stableLp.expectedApy}</p>
                       </div>
                       <div className="p-3 bg-gray-900/50 rounded-xl">
-                        <p className="text-sm text-gray-500">Risco</p>
-                        <p className="text-xl font-bold text-green-400">Médio-Baixo</p>
+                        <p className="text-sm text-gray-500">{t('strategies.aave.risk')}</p>
+                        <p className="text-xl font-bold text-green-400">{t('strategies.quickswap.riskLevel')}</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Endereço:</span>
+                      <span className="text-gray-500">{t('contract.address')}:</span>
                       <div className="flex items-center gap-2">
                         <code className="text-gray-300 text-xs">{V3_CONTRACTS.stableLpStrategy.slice(0, 10)}...</code>
                         <Button 
@@ -788,8 +762,8 @@ function LandingPage({
                         <Settings className="w-5 h-5 text-purple-400" />
                       </div>
                       <div>
-                        <p className="text-white font-medium">Strategy Controller</p>
-                        <p className="text-xs text-gray-500">Gerenciador de alocação de estratégias</p>
+                        <p className="text-white font-medium">{t('contract.strategyController')}</p>
+                        <p className="text-xs text-gray-500">{t('strategies.controllerDesc')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -821,19 +795,19 @@ function LandingPage({
             viewport={{ once: true }}
           >
             <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">Contratos Deployados</h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">Todos os contratos verificados na Polygon Mainnet</p>
+              <h2 className="text-4xl font-bold text-white mb-4">{t('security.contracts.title')}</h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">{t('contracts.onPolygon')}</p>
             </motion.div>
 
             <motion.div variants={staggerItem}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { name: 'Vault V3', address: V3_CONTRACTS.vault, icon: Layers, desc: 'ERC-4626 Tokenized Vault' },
-                  { name: 'Strategy Controller', address: V3_CONTRACTS.strategyController, icon: Settings, desc: 'Gerenciador de estratégias' },
-                  { name: 'Aave Loop Strategy', address: V3_CONTRACTS.aaveLoopStrategy, icon: Globe, desc: 'Estratégia Aave V3' },
-                  { name: 'Stable LP Strategy', address: V3_CONTRACTS.stableLpStrategy, icon: PieChart, desc: 'Estratégia QuickSwap + Aave' },
-                  { name: 'Referral System', address: V3_CONTRACTS.referral, icon: Users, desc: 'Sistema de indicações 5 níveis' },
-                  { name: 'Fee Distributor', address: V3_CONTRACTS.feeDistributor, icon: DollarSign, desc: 'Distribuidor de taxas' },
+                  { name: t('contract.vault'), address: V3_CONTRACTS.vault, icon: Layers, desc: 'ERC-4626 Tokenized Vault' },
+                  { name: t('contract.strategyController'), address: V3_CONTRACTS.strategyController, icon: Settings, desc: t('strategies.controllerDesc') },
+                  { name: t('contract.aaveStrategy'), address: V3_CONTRACTS.aaveLoopStrategy, icon: Globe, desc: t('strategies.aave.badge') },
+                  { name: t('contract.stableLpStrategy'), address: V3_CONTRACTS.stableLpStrategy, icon: PieChart, desc: t('strategies.quickswap.badge') },
+                  { name: t('contract.referral'), address: V3_CONTRACTS.referral, icon: Users, desc: t('features.referral.title') },
+                  { name: t('contract.feeDistributor'), address: V3_CONTRACTS.feeDistributor, icon: DollarSign, desc: t('fees.title') },
                 ].map((contract, index) => (
                   <Card key={index} className="bg-gray-800/30 border-gray-700/50 hover:border-purple-500/30 transition-colors">
                     <CardContent className="pt-4">
@@ -991,7 +965,7 @@ function LandingPage({
               </div>
               <div>
                 <p className="text-white font-semibold">YieldVault DeFi</p>
-                <p className="text-xs text-gray-500">Polygon Mainnet • Sistema V3</p>
+                <p className="text-xs text-gray-500">{t('hero.badge')}</p>
               </div>
             </div>
 
@@ -1049,6 +1023,11 @@ function Dashboard({
   formatAddress,
 }: DashboardProps) {
   const stats = protocolData?.stats || { tvlFormatted: '...', avgAPY: '...', users: 0 }
+  const strategies = protocolData?.strategies || {
+    aaveLoop: { apy: '8-15', isActive: true, allocation: 5000 },
+    stableLp: { apy: '12-25', isActive: true, allocation: 5000 },
+  }
+  
   const userSummary = userData?.summary || {
     totalDeposited: '0',
     totalWithdrawn: '0',
@@ -1192,9 +1171,9 @@ function Dashboard({
         {/* Strategy Cards */}
         <div className="px-4 mt-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold">Estratégias Ativas</h3>
+            <h3 className="text-white font-semibold">{t('strategies.active')}</h3>
             <Badge className="bg-green-500/20 text-green-400 text-xs">
-              <Activity className="w-3 h-3 mr-1" /> 2 Ativas
+              <Activity className="w-3 h-3 mr-1" /> 2 {t('strategies.activeCount')}
             </Badge>
           </div>
           
@@ -1203,11 +1182,11 @@ function Dashboard({
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Globe className="w-4 h-4 text-blue-400" />
-                <span className="text-white text-sm font-medium">Aave Loop</span>
+                <span className="text-white text-sm font-medium">{t('strategies.aave.badge')}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-400 font-bold text-lg">8-15%</p>
+                  <p className="text-blue-400 font-bold text-lg">{strategies.aaveLoop?.apyRange || '8-15%'}</p>
                   <p className="text-gray-500 text-xs">APY</p>
                 </div>
                 <Badge className="bg-blue-500/20 text-blue-300">50%</Badge>
@@ -1218,11 +1197,11 @@ function Dashboard({
             <div className="bg-fuchsia-500/10 border border-fuchsia-500/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <PieChart className="w-4 h-4 text-fuchsia-400" />
-                <span className="text-white text-sm font-medium">Stable LP</span>
+                <span className="text-white text-sm font-medium">{t('strategies.quickswap.badge')}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-fuchsia-400 font-bold text-lg">12-25%</p>
+                  <p className="text-fuchsia-400 font-bold text-lg">{strategies.stableLp?.apyRange || '12-25%'}</p>
                   <p className="text-gray-500 text-xs">APY</p>
                 </div>
                 <Badge className="bg-fuchsia-500/20 text-fuchsia-300">50%</Badge>
@@ -1264,7 +1243,7 @@ function Dashboard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-green-400" />
+                  <LineChart className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
                   <p className="text-gray-400 text-xs">{t('dashboard.stats.earnings')}</p>
