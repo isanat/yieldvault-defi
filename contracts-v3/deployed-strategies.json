@@ -1,0 +1,11 @@
+{
+  "deployedAt": "2026-03-12T00:30:19.333Z",
+  "chainId": 137,
+  "network": "polygon-mainnet",
+  "owner": "0x80e65E0B160d752121cc62646dA69808846ED63b",
+  "strategyController": "0x1a321f28A6f0851c566589E0303dd883a082A9F6",
+  "aaveLoopStrategy": "0xd8E97004c1E8EfbbFbEd3d234807b000E12ED5B3",
+  "stableLpStrategy": "0x5dAFd27f43b15f3a0839bEf885edB7709705cd44",
+  "vault": "0x0E8F1358e12BB30C59124B5c4288F50ddBB75bff",
+  "usdt": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+}

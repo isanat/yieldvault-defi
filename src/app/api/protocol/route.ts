@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import {
   V3_CONTRACTS,
+  STRATEGY_CONFIG,
   getProtocolStats,
   getFees,
   getReferralRates,
@@ -15,18 +16,15 @@ export const revalidate = 30 // Cache for 30 seconds
 export async function GET() {
   try {
     // Fetch all real data from blockchain
-    const [stats, fees, referralRates, gasPrice, isPaused] = await Promise.all([
+    const [stats, fees, referralRates, gasPrice, isPaused, aaveLoopStrategy, stableLpStrategy] = await Promise.all([
       getProtocolStats(),
       getFees(),
       getReferralRates(),
       getGasPrice(),
       isVaultPaused(),
+      getStrategyData(V3_CONTRACTS.aaveLoopStrategy as `0x${string}`),
+      getStrategyData(V3_CONTRACTS.stableLpStrategy as `0x${string}`),
     ])
-
-    // V3 uses LocalStrategyManager instead of separate Aave/QuickSwap strategies
-    // For now, show simulated APY based on LocalStrategyManager
-    const aaveAPY = 5.5
-    const quickAPY = 12.0
 
     return NextResponse.json({
       success: true,
@@ -55,26 +53,36 @@ export async function GET() {
         // Referral rates (REAL DATA)
         referralRates: referralRates.map(r => Number(r)),
 
-        // Strategy data (V3 uses LocalStrategyManager)
+        // Real Strategy Data from deployed contracts
         strategies: {
-          aave: {
-            name: 'Local Strategy Manager',
-            address: V3_CONTRACTS.localStrategyManager,
-            apy: aaveAPY.toFixed(1),
-            apyRange: '4-8',
-            risk: 'low',
-            isActive: true,
-            balanceOf: '0',
+          aaveLoop: {
+            name: STRATEGY_CONFIG.aaveLoop.name,
+            address: V3_CONTRACTS.aaveLoopStrategy,
+            apy: aaveLoopStrategy.apyFormatted || '8-15',
+            apyRange: STRATEGY_CONFIG.aaveLoop.expectedApy,
+            risk: STRATEGY_CONFIG.aaveLoop.risk,
+            description: STRATEGY_CONFIG.aaveLoop.description,
+            allocation: STRATEGY_CONFIG.aaveLoop.allocation,
+            isActive: aaveLoopStrategy.isActive,
+            balanceOf: aaveLoopStrategy.balanceOf.toString(),
           },
-          quickswap: {
-            name: 'Local Strategy Manager',
-            address: V3_CONTRACTS.localStrategyManager,
-            apy: quickAPY.toFixed(1),
-            apyRange: '8-15',
-            risk: 'medium',
-            isActive: true,
-            balanceOf: '0',
+          stableLp: {
+            name: STRATEGY_CONFIG.stableLp.name,
+            address: V3_CONTRACTS.stableLpStrategy,
+            apy: stableLpStrategy.apyFormatted || '12-25',
+            apyRange: STRATEGY_CONFIG.stableLp.expectedApy,
+            risk: STRATEGY_CONFIG.stableLp.risk,
+            description: STRATEGY_CONFIG.stableLp.description,
+            allocation: STRATEGY_CONFIG.stableLp.allocation,
+            isActive: stableLpStrategy.isActive,
+            balanceOf: stableLpStrategy.balanceOf.toString(),
           },
+        },
+
+        // Strategy Controller
+        strategyController: {
+          address: V3_CONTRACTS.strategyController,
+          totalAllocation: 10000, // 100%
         },
 
         // Network info

@@ -2,6 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as localStrategyManagerV3Sol from "./LocalStrategyManagerV3.sol";
+export * as interfaces from "./interfaces";
+export * as strategies from "./strategies";
 export { ConfigV3__factory } from "./ConfigV3__factory";
 export { FeeDistributorV3__factory } from "./FeeDistributorV3__factory";
 export { IReferralV3__factory } from "./IReferralV3__factory";

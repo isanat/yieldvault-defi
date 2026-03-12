@@ -1,6 +1,6 @@
 import { formatUnits, parseUnits } from 'viem'
 import { publicClient } from './client'
-import { V3_CONTRACTS } from './contracts'
+import { V3_CONTRACTS, STRATEGY_CONFIG } from './contracts'
 import { vaultABI, configABI, referralABI, strategyABI, erc20ABI } from './abis'
 
 // Types
@@ -358,20 +358,20 @@ export async function convertToAssets(shares: bigint): Promise<bigint> {
  */
 export async function getProtocolStats(): Promise<ProtocolStats> {
   try {
-    const [tvl, totalSupply, totalUsers, fees, referralRates, aaveStrategy, quickswapStrategy] = await Promise.all([
+    const [tvl, totalSupply, totalUsers, fees, referralRates, aaveLoopStrategy, stableLpStrategy] = await Promise.all([
       getTVL(),
       getTotalSupply(),
       getTotalUsers(),
       getFees(),
       getReferralRates(),
-      getStrategyData(V3_CONTRACTS.aaveStrategy as `0x${string}`),
-      getStrategyData(V3_CONTRACTS.quickswapStrategy as `0x${string}`),
+      getStrategyData(V3_CONTRACTS.aaveLoopStrategy as `0x${string}`),
+      getStrategyData(V3_CONTRACTS.stableLpStrategy as `0x${string}`),
     ])
 
     // Calculate average APY from strategies
-    const aaveAPY = Number(aaveStrategy.apyFormatted) || 5.5
-    const quickAPY = Number(quickswapStrategy.apyFormatted) || 15
-    const avgAPY = ((aaveAPY + quickAPY) / 2).toFixed(1)
+    const aaveAPY = Number(aaveLoopStrategy.apyFormatted) || 8
+    const stableAPY = Number(stableLpStrategy.apyFormatted) || 15
+    const avgAPY = ((aaveAPY + stableAPY) / 2).toFixed(1)
 
     const tvlFormatted = `$${(Number(formatUnits(tvl, USDT_DECIMALS)) / 1000000).toFixed(2)}M`
 

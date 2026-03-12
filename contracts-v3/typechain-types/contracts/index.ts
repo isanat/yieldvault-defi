@@ -3,6 +3,10 @@
 /* eslint-disable */
 import type * as localStrategyManagerV3Sol from "./LocalStrategyManagerV3.sol";
 export type { localStrategyManagerV3Sol };
+import type * as interfaces from "./interfaces";
+export type { interfaces };
+import type * as strategies from "./strategies";
+export type { strategies };
 export type { ConfigV3 } from "./ConfigV3";
 export type { FeeDistributorV3 } from "./FeeDistributorV3";
 export type { IReferralV3 } from "./IReferralV3";

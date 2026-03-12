@@ -30,6 +30,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC20__factory>;
     getContractFactory(
+      name: "IERC721Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721Receiver__factory>;
+    getContractFactory(
       name: "ConfigV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ConfigV3__factory>;
@@ -37,6 +41,22 @@ declare module "hardhat/types/runtime" {
       name: "FeeDistributorV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FeeDistributorV3__factory>;
+    getContractFactory(
+      name: "IAaveV3Pool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IAaveV3Pool__factory>;
+    getContractFactory(
+      name: "IAaveV3PoolDataProvider",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IAaveV3PoolDataProvider__factory>;
+    getContractFactory(
+      name: "IQuickSwapV3Pool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IQuickSwapV3Pool__factory>;
+    getContractFactory(
+      name: "IQuickSwapV3PositionManager",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IQuickSwapV3PositionManager__factory>;
     getContractFactory(
       name: "IReferralV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -57,6 +77,26 @@ declare module "hardhat/types/runtime" {
       name: "ReferralV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReferralV3__factory>;
+    getContractFactory(
+      name: "AaveLoopStrategyV3",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AaveLoopStrategyV3__factory>;
+    getContractFactory(
+      name: "BaseStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.BaseStrategy__factory>;
+    getContractFactory(
+      name: "IStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IStrategy__factory>;
+    getContractFactory(
+      name: "StableLpStrategyV3",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StableLpStrategyV3__factory>;
+    getContractFactory(
+      name: "StrategyControllerV3",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StrategyControllerV3__factory>;
     getContractFactory(
       name: "YieldVaultV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -83,6 +123,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC20>;
     getContractAt(
+      name: "IERC721Receiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC721Receiver>;
+    getContractAt(
       name: "ConfigV3",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -92,6 +137,26 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.FeeDistributorV3>;
+    getContractAt(
+      name: "IAaveV3Pool",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IAaveV3Pool>;
+    getContractAt(
+      name: "IAaveV3PoolDataProvider",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IAaveV3PoolDataProvider>;
+    getContractAt(
+      name: "IQuickSwapV3Pool",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IQuickSwapV3Pool>;
+    getContractAt(
+      name: "IQuickSwapV3PositionManager",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IQuickSwapV3PositionManager>;
     getContractAt(
       name: "IReferralV3",
       address: string | ethers.Addressable,
@@ -117,6 +182,31 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ReferralV3>;
+    getContractAt(
+      name: "AaveLoopStrategyV3",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AaveLoopStrategyV3>;
+    getContractAt(
+      name: "BaseStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BaseStrategy>;
+    getContractAt(
+      name: "IStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IStrategy>;
+    getContractAt(
+      name: "StableLpStrategyV3",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StableLpStrategyV3>;
+    getContractAt(
+      name: "StrategyControllerV3",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StrategyControllerV3>;
     getContractAt(
       name: "YieldVaultV3",
       address: string | ethers.Addressable,
@@ -140,6 +230,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
+      name: "IERC721Receiver",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Receiver>;
+    deployContract(
       name: "ConfigV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ConfigV3>;
@@ -147,6 +241,22 @@ declare module "hardhat/types/runtime" {
       name: "FeeDistributorV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FeeDistributorV3>;
+    deployContract(
+      name: "IAaveV3Pool",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAaveV3Pool>;
+    deployContract(
+      name: "IAaveV3PoolDataProvider",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAaveV3PoolDataProvider>;
+    deployContract(
+      name: "IQuickSwapV3Pool",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3Pool>;
+    deployContract(
+      name: "IQuickSwapV3PositionManager",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3PositionManager>;
     deployContract(
       name: "IReferralV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -167,6 +277,26 @@ declare module "hardhat/types/runtime" {
       name: "ReferralV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReferralV3>;
+    deployContract(
+      name: "AaveLoopStrategyV3",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AaveLoopStrategyV3>;
+    deployContract(
+      name: "BaseStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BaseStrategy>;
+    deployContract(
+      name: "IStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IStrategy>;
+    deployContract(
+      name: "StableLpStrategyV3",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StableLpStrategyV3>;
+    deployContract(
+      name: "StrategyControllerV3",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StrategyControllerV3>;
     deployContract(
       name: "YieldVaultV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -193,6 +323,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
+      name: "IERC721Receiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Receiver>;
+    deployContract(
       name: "ConfigV3",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -202,6 +337,26 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FeeDistributorV3>;
+    deployContract(
+      name: "IAaveV3Pool",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAaveV3Pool>;
+    deployContract(
+      name: "IAaveV3PoolDataProvider",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IAaveV3PoolDataProvider>;
+    deployContract(
+      name: "IQuickSwapV3Pool",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3Pool>;
+    deployContract(
+      name: "IQuickSwapV3PositionManager",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IQuickSwapV3PositionManager>;
     deployContract(
       name: "IReferralV3",
       args: any[],
@@ -227,6 +382,31 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReferralV3>;
+    deployContract(
+      name: "AaveLoopStrategyV3",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AaveLoopStrategyV3>;
+    deployContract(
+      name: "BaseStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BaseStrategy>;
+    deployContract(
+      name: "IStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IStrategy>;
+    deployContract(
+      name: "StableLpStrategyV3",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StableLpStrategyV3>;
+    deployContract(
+      name: "StrategyControllerV3",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.StrategyControllerV3>;
     deployContract(
       name: "YieldVaultV3",
       args: any[],

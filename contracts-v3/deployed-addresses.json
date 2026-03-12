@@ -1,0 +1,50 @@
+{
+  "deployedAt": "2025-03-24T00:00:00.000Z",
+  "chainId": 137,
+  "network": "polygon-mainnet",
+  "owner": "0x80e65E0B160d752121cc62646dA69808846ED63b",
+  "vault": "0x0E8F1358e12BB30C59124B5c4288F50ddBB75bff",
+  "config": "0xa4A47b3485f6764E3e94562fA4a42DF929a63Be1",
+  "referral": "0x7a572e317621f356aF2d5d651533FB30b51f51f5",
+  "feeDistributor": "0xf1B69c2814E08b587Fa448eCce97aaEc5e8773Fd",
+  "localStrategyManager": "0x801E1057BA35FB085021d72570AFf26A23332127",
+  "strategyController": "0x1a321f28A6f0851c566589E0303dd883a082A9F6",
+  "usdt": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+  "strategies": {
+    "simulated": {
+      "address": "0x801E1057BA35FB085021d72570AFf26A23332127",
+      "name": "Simulated Strategy",
+      "active": true,
+      "allocation": 10000
+    },
+    "aaveLoop": {
+      "address": "0xd8E97004c1E8EfbbFbEd3d234807b000E12ED5B3",
+      "name": "Aave V3 Loop Strategy",
+      "active": true,
+      "allocation": 5000,
+      "status": "deployed",
+      "description": "Estratégia de lending com alavancagem no Aave V3",
+      "risk": "Médio",
+      "expectedApy": "8-15%"
+    },
+    "stableLP": {
+      "address": "0x5dAFd27f43b15f3a0839bEf885edB7709705cd44",
+      "name": "Stable LP + Lending Strategy",
+      "active": true,
+      "allocation": 5000,
+      "status": "deployed",
+      "description": "LP de stablecoins no QuickSwap V3 + lending no Aave",
+      "risk": "Médio-Baixo",
+      "expectedApy": "12-25%"
+    }
+  },
+  "protocolAddresses": {
+    "aave": {
+      "pool": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+      "dataProvider": "0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654"
+    },
+    "quickswap": {
+      "positionManager": "0x8EF88e4c6cdAc15B562477E81289BBE046336506"
+    }
+  }
+}

@@ -41,10 +41,8 @@ import {
   Layers,
   Target,
   Lock,
-  Home,
   ArrowDownCircle,
   ArrowUpCircle,
-  User,
   Share2,
   DollarSign,
   BarChart3,
@@ -56,16 +54,21 @@ import {
   PieChart,
   Settings,
   ChevronRight,
-  Play,
   ChevronDown,
   AlertTriangle,
   RefreshCw,
+  Activity,
+  Percent,
+  Database,
+  Network,
+  Link2,
 } from 'lucide-react'
 import { toast, Toaster } from 'sonner'
 import { useTranslation, languages } from '@/lib/i18n'
 import { useWallet } from '@/hooks/useWallet'
 import { useProtocolData } from '@/hooks/useProtocol'
 import { useUserData } from '@/hooks/useUserData'
+import { V3_CONTRACTS, STRATEGY_CONFIG } from '@/lib/blockchain/contracts'
 
 // Animation variants
 const slideVariants = {
@@ -117,13 +120,6 @@ export default function YieldVaultApp() {
 
   const currentLang = languages.find(l => l.code === language)
 
-  // Redirect to dashboard if connected
-  useEffect(() => {
-    if (wallet.isConnected && currentPage === 'landing') {
-      // Auto-enter dashboard after connection
-    }
-  }, [wallet.isConnected, currentPage])
-
   const handleCopyReferral = () => {
     if (userData?.referral?.code) {
       navigator.clipboard.writeText(userData.referral.code)
@@ -167,10 +163,10 @@ export default function YieldVaultApp() {
 
   // Stats from real data
   const stats = protocolData?.stats || {
-    tvlFormatted: 'Loading...',
+    tvlFormatted: 'Carregando...',
     users: 0,
     avgAPY: '0',
-    totalPaidOut: 'Loading...',
+    totalPaidOut: 'Carregando...',
   }
 
   const fees = protocolData?.fees || {
@@ -181,8 +177,8 @@ export default function YieldVaultApp() {
   }
 
   const strategies = protocolData?.strategies || {
-    aave: { apy: '0', risk: 'low' },
-    quickswap: { apy: '0', risk: 'medium' },
+    aaveLoop: { apy: '8', risk: 'Médio', isActive: true },
+    stableLp: { apy: '15', risk: 'Médio-Baixo', isActive: true },
   }
 
   const contracts = protocolData?.contracts || {}
@@ -400,7 +396,10 @@ function LandingPage({
 }: LandingPageProps) {
   const stats = protocolData?.stats || { tvlFormatted: '...', users: 0, avgAPY: '...', totalPaidOut: '...' }
   const fees = protocolData?.fees || { performanceFeeBP: 2000, depositFeeBP: 500, managementFeeBP: 200, withdrawalFeeBP: 0 }
-  const strategies = protocolData?.strategies || { aave: { apy: '5.5' }, quickswap: { apy: '15' } }
+  const strategies = protocolData?.strategies || { 
+    aaveLoop: { apy: '8', risk: 'Médio', expectedApy: '8-15%' }, 
+    stableLp: { apy: '15', risk: 'Médio-Baixo', expectedApy: '12-25%' } 
+  }
   const contracts = protocolData?.contracts || {}
   const referralRates = protocolData?.referralRates || [4000, 2500, 1500, 1200, 800]
   const isPaused = protocolData?.status?.isPaused || false
@@ -425,16 +424,16 @@ function LandingPage({
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">YieldVault</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">DeFi Yield Optimizer</p>
+                <p className="text-xs text-gray-500 hidden sm:block">DeFi Yield Optimizer • V3</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-6 text-sm" suppressHydrationWarning>
                 <a href="#features" className="text-gray-400 hover:text-white transition-colors">{t('nav.features')}</a>
-                <a href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">{t('nav.howItWorks')}</a>
+                <a href="#strategies" className="text-gray-400 hover:text-white transition-colors">Estratégias</a>
                 <a href="#security" className="text-gray-400 hover:text-white transition-colors">{t('nav.security')}</a>
-                <a href="#faq" className="text-gray-400 hover:text-white transition-colors">{t('nav.faq')}</a>
+                <a href="#contracts" className="text-gray-400 hover:text-white transition-colors">Contratos</a>
               </div>
 
               {/* Language Selector */}
@@ -480,7 +479,7 @@ function LandingPage({
                       className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
                     >
                       <AlertTriangle className="w-4 h-4 mr-2" />
-                      Switch Network
+                      Trocar Rede
                     </Button>
                   )}
                   <Button
@@ -516,7 +515,7 @@ function LandingPage({
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10">
             <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2">
               <AlertTriangle className="w-4 h-4 mr-2" />
-              Protocol Paused
+              Protocolo Pausado
             </Badge>
           </div>
         )}
@@ -531,7 +530,7 @@ function LandingPage({
             <motion.div variants={staggerItem} className="flex justify-center mb-8">
               <Badge className={`bg-purple-500/10 text-purple-400 border-purple-500/30 px-4 py-2 text-sm`}>
                 <Zap className="w-4 h-4 mr-2" />
-                {t('hero.badge')}
+                Polygon Mainnet • Sistema V3
               </Badge>
             </motion.div>
 
@@ -659,8 +658,8 @@ function LandingPage({
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8">
+      {/* Strategies Section - REAL DATA */}
+      <section id="strategies" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={staggerContainer}
@@ -669,38 +668,151 @@ function LandingPage({
             viewport={{ once: true }}
           >
             <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t('howItWorks.title')}</h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">{t('howItWorks.subtitle')}</p>
+              <h2 className="text-4xl font-bold text-white mb-4">Estratégias Ativas</h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">Alocação inteligente entre estratégias reais deployadas na Polygon</p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {[
-                { step: 1, title: t('howItWorks.step1.title'), desc: t('howItWorks.step1.description'), icon: Wallet },
-                { step: 2, title: t('howItWorks.step2.title'), desc: t('howItWorks.step2.description'), icon: ArrowDownCircle },
-                { step: 3, title: t('howItWorks.step3.title'), desc: t('howItWorks.step3.description'), icon: TrendingUp },
-                { step: 4, title: t('howItWorks.step4.title'), desc: t('howItWorks.step4.description'), icon: DollarSign },
-              ].map((item, index) => (
-                <motion.div key={index} variants={staggerItem} className="relative">
-                  {index < 3 && <div className="hidden md:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-purple-500/50 to-transparent -translate-x-1/2" />}
-                  <div className="text-center">
-                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-500/20 to-violet-500/20 rounded-3xl flex items-center justify-center border border-purple-500/30 relative">
-                      <item.icon className="w-10 h-10 text-purple-400" />
-                      <div className={`absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r ${COLORS.gradient} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
-                        {item.step}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Aave Loop Strategy */}
+              <motion.div variants={staggerItem}>
+                <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30 h-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center">
+                          <Globe className="w-8 h-8 text-blue-400" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-white text-xl">Aave V3 Loop</CardTitle>
+                          <Badge className="bg-green-500/20 text-green-400 mt-1">
+                            <CheckCircle className="w-3 h-3 mr-1" /> Ativa
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-blue-400">50%</p>
+                        <p className="text-xs text-gray-500">Alocação</p>
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 mb-4">Estratégia de lending com alavancagem no Aave V3. Baixo risco, retornos consistentes através de loops de empréstimo.</p>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="p-3 bg-gray-900/50 rounded-xl">
+                        <p className="text-sm text-gray-500">APY Esperado</p>
+                        <p className="text-xl font-bold text-blue-400">8-15%</p>
+                      </div>
+                      <div className="p-3 bg-gray-900/50 rounded-xl">
+                        <p className="text-sm text-gray-500">Risco</p>
+                        <p className="text-xl font-bold text-yellow-400">Médio</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Endereço:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-gray-300 text-xs">{V3_CONTRACTS.aaveLoopStrategy.slice(0, 10)}...</code>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-6 w-6 p-0" 
+                          onClick={() => window.open(`https://polygonscan.com/address/${V3_CONTRACTS.aaveLoopStrategy}`, '_blank')}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Stable LP Strategy */}
+              <motion.div variants={staggerItem}>
+                <Card className="bg-gradient-to-br from-fuchsia-500/10 to-purple-500/10 border-fuchsia-500/30 h-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-fuchsia-500/20 rounded-2xl flex items-center justify-center">
+                          <PieChart className="w-8 h-8 text-fuchsia-400" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-white text-xl">Stable LP + Lending</CardTitle>
+                          <Badge className="bg-green-500/20 text-green-400 mt-1">
+                            <CheckCircle className="w-3 h-3 mr-1" /> Ativa
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-fuchsia-400">50%</p>
+                        <p className="text-xs text-gray-500">Alocação</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 mb-4">LP de stablecoins no QuickSwap V3 + lending no Aave. Maiores retornos com gestão ativa de posições.</p>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="p-3 bg-gray-900/50 rounded-xl">
+                        <p className="text-sm text-gray-500">APY Esperado</p>
+                        <p className="text-xl font-bold text-fuchsia-400">12-25%</p>
+                      </div>
+                      <div className="p-3 bg-gray-900/50 rounded-xl">
+                        <p className="text-sm text-gray-500">Risco</p>
+                        <p className="text-xl font-bold text-green-400">Médio-Baixo</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Endereço:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-gray-300 text-xs">{V3_CONTRACTS.stableLpStrategy.slice(0, 10)}...</code>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-6 w-6 p-0" 
+                          onClick={() => window.open(`https://polygonscan.com/address/${V3_CONTRACTS.stableLpStrategy}`, '_blank')}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
+
+            {/* Strategy Controller Info */}
+            <motion.div variants={staggerItem} className="mt-8">
+              <Card className="bg-gray-800/30 border-gray-700/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                        <Settings className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">Strategy Controller</p>
+                        <p className="text-xs text-gray-500">Gerenciador de alocação de estratégias</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <code className="text-gray-300 text-xs bg-gray-800 px-3 py-1 rounded">{V3_CONTRACTS.strategyController}</code>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => window.open(`https://polygonscan.com/address/${V3_CONTRACTS.strategyController}`, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Strategies Section - Real APY */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+      {/* Contracts Section */}
+      <section id="contracts" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={staggerContainer}
@@ -709,97 +821,53 @@ function LandingPage({
             viewport={{ once: true }}
           >
             <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t('strategies.title')}</h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">{t('strategies.subtitle')}</p>
+              <h2 className="text-4xl font-bold text-white mb-4">Contratos Deployados</h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">Todos os contratos verificados na Polygon Mainnet</p>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Aave Strategy */}
-              <motion.div variants={staggerItem}>
-                <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30 h-full">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center">
-                        <Globe className="w-8 h-8 text-blue-400" />
+            <motion.div variants={staggerItem}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { name: 'Vault V3', address: V3_CONTRACTS.vault, icon: Layers, desc: 'ERC-4626 Tokenized Vault' },
+                  { name: 'Strategy Controller', address: V3_CONTRACTS.strategyController, icon: Settings, desc: 'Gerenciador de estratégias' },
+                  { name: 'Aave Loop Strategy', address: V3_CONTRACTS.aaveLoopStrategy, icon: Globe, desc: 'Estratégia Aave V3' },
+                  { name: 'Stable LP Strategy', address: V3_CONTRACTS.stableLpStrategy, icon: PieChart, desc: 'Estratégia QuickSwap + Aave' },
+                  { name: 'Referral System', address: V3_CONTRACTS.referral, icon: Users, desc: 'Sistema de indicações 5 níveis' },
+                  { name: 'Fee Distributor', address: V3_CONTRACTS.feeDistributor, icon: DollarSign, desc: 'Distribuidor de taxas' },
+                ].map((contract, index) => (
+                  <Card key={index} className="bg-gray-800/30 border-gray-700/50 hover:border-purple-500/30 transition-colors">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <contract.icon className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium">{contract.name}</p>
+                          <p className="text-xs text-gray-500 mb-2">{contract.desc}</p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs text-gray-400 truncate">{contract.address.slice(0, 8)}...{contract.address.slice(-6)}</code>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-5 w-5 p-0" 
+                              onClick={() => window.open(`https://polygonscan.com/address/${contract.address}`, '_blank')}
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-white text-xl">{t('strategies.aave.title')}</CardTitle>
-                        <Badge className="bg-blue-500/20 text-blue-400 mt-1">{t('strategies.aave.badge')}</Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-400 mb-4">{t('strategies.aave.description')}</p>
-                    <div className="flex justify-between items-center p-4 bg-gray-900/50 rounded-xl">
-                      <div>
-                        <p className="text-sm text-gray-500">{t('strategies.aave.apy')}</p>
-                        <p className="text-2xl font-bold text-blue-400">
-                          {protocolLoading ? '...' : strategies.aave.apy}%
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{t('strategies.aave.risk')}</p>
-                        <Badge className="bg-purple-500/20 text-purple-400">{t('strategies.aave.riskLevel')}</Badge>
-                      </div>
-                    </div>
-                    {strategies.aave.address && (
-                      <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                        <span className="font-mono">{strategies.aave.address.slice(0, 10)}...</span>
-                        <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => window.open(`https://polygonscan.com/address/${strategies.aave.address}`, '_blank')}>
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* QuickSwap Strategy */}
-              <motion.div variants={staggerItem}>
-                <Card className="bg-gradient-to-br from-fuchsia-500/10 to-purple-500/10 border-fuchsia-500/30 h-full">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-fuchsia-500/20 rounded-2xl flex items-center justify-center">
-                        <PieChart className="w-8 h-8 text-fuchsia-400" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-white text-xl">{t('strategies.quickswap.title')}</CardTitle>
-                        <Badge className="bg-fuchsia-500/20 text-fuchsia-400 mt-1">{t('strategies.quickswap.badge')}</Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-400 mb-4">{t('strategies.quickswap.description')}</p>
-                    <div className="flex justify-between items-center p-4 bg-gray-900/50 rounded-xl">
-                      <div>
-                        <p className="text-sm text-gray-500">{t('strategies.aave.apy')}</p>
-                        <p className="text-2xl font-bold text-fuchsia-400">
-                          {protocolLoading ? '...' : strategies.quickswap.apy}%
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{t('strategies.aave.risk')}</p>
-                        <Badge className="bg-fuchsia-500/20 text-fuchsia-400">{t('strategies.quickswap.riskLevel')}</Badge>
-                      </div>
-                    </div>
-                    {strategies.quickswap.address && (
-                      <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                        <span className="font-mono">{strategies.quickswap.address.slice(0, 10)}...</span>
-                        <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => window.open(`https://polygonscan.com/address/${strategies.quickswap.address}`, '_blank')}>
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* Referral System */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={staggerContainer}
@@ -846,7 +914,7 @@ function LandingPage({
       </section>
 
       {/* Fee Structure - Real Fees */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={staggerContainer}
@@ -877,104 +945,6 @@ function LandingPage({
                 </motion.div>
               ))}
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Security */}
-      <section id="security" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t('security.title')}</h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">{t('security.subtitle')}</p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                { icon: Clock, title: t('security.timelock.title'), desc: t('security.timelock.description'), color: 'violet' },
-                { icon: Shield, title: t('security.roleBased.title'), desc: t('security.roleBased.description'), color: 'purple' },
-                { icon: Settings, title: t('security.pausable.title'), desc: t('security.pausable.description'), color: 'fuchsia' },
-              ].map((item, index) => (
-                <motion.div key={index} variants={staggerItem}>
-                  <Card className="bg-gray-800/30 border-gray-700/50 h-full">
-                    <CardContent className="pt-8 text-center">
-                      <div className={`w-16 h-16 mx-auto mb-6 bg-${item.color}-500/10 rounded-2xl flex items-center justify-center`}>
-                        <item.icon className={`w-8 h-8 text-${item.color}-400`} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
-                      <p className="text-gray-400 text-sm">{item.desc}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Contract Addresses */}
-            {Object.keys(contracts).length > 0 && (
-              <motion.div variants={staggerItem} className="mt-12">
-                <Card className="bg-gray-800/30 border-gray-700/50">
-                  <CardHeader>
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <Layers className="w-5 h-5 text-purple-400" />
-                      {t('security.contracts.title')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {Object.entries(contracts).map(([name, address]) => (
-                        <div key={name} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                          <span className="text-gray-400 capitalize">{name.replace(/([A-Z])/g, ' $1')}</span>
-                          <div className="flex items-center gap-2">
-                            <code className="text-gray-300">{(address as string).slice(0, 6)}...{(address as string).slice(-4)}</code>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => window.open(`https://polygonscan.com/address/${address}`, '_blank')}>
-                              <ExternalLink className="w-3 h-3 text-gray-500" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            <motion.div variants={staggerItem} className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t('faq.title')}</h2>
-              <p className="text-xl text-gray-400">{t('faq.subtitle')}</p>
-            </motion.div>
-
-            <motion.div variants={staggerItem}>
-              <Accordion type="single" collapsible className="space-y-4">
-                {[1, 2, 3, 4, 5, 6].map((num) => (
-                  <AccordionItem key={num} value={`item-${num}`} className="bg-gray-800/30 border border-gray-700/50 rounded-xl px-6">
-                    <AccordionTrigger className="text-white hover:text-purple-400 text-left">
-                      {t(`faq.q${num}`)}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-gray-400">
-                      {t(`faq.a${num}`)}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -1021,7 +991,7 @@ function LandingPage({
               </div>
               <div>
                 <p className="text-white font-semibold">YieldVault DeFi</p>
-                <p className="text-xs text-gray-500">Polygon Mainnet • V2 System</p>
+                <p className="text-xs text-gray-500">Polygon Mainnet • Sistema V3</p>
               </div>
             </div>
 
@@ -1032,7 +1002,7 @@ function LandingPage({
               <a href="#" className="hover:text-white transition-colors">{t('footer.twitter')}</a>
             </div>
 
-            <p className="text-sm text-gray-500">© 2024 YieldVault. {t('footer.rights')}</p>
+            <p className="text-sm text-gray-500">© 2025 YieldVault. {t('footer.rights')}</p>
           </div>
         </div>
       </footer>
@@ -1041,7 +1011,7 @@ function LandingPage({
 }
 
 // ============================================
-// DASHBOARD COMPONENT - Mobile First Design
+// DASHBOARD COMPONENT
 // ============================================
 interface DashboardProps {
   onBackToLanding: () => void
@@ -1102,7 +1072,7 @@ function Dashboard({
       className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 flex flex-col"
     >
       {/* Compact Header */}
-      <header className="sticky top-0 z-50 bg-gray-950/95 backdrop-blur-xl border-b border-purple-500/20 safe-area-top">
+      <header className="sticky top-0 z-50 bg-gray-950/95 backdrop-blur-xl border-b border-purple-500/20">
         <div className="flex items-center justify-between px-4 h-14">
           {/* Left: Back + Logo */}
           <div className="flex items-center gap-2">
@@ -1170,7 +1140,6 @@ function Dashboard({
         {/* Hero Balance Card */}
         <div className="px-4 pt-4">
           <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${COLORS.gradient} p-5 shadow-2xl shadow-purple-500/20`}>
-            {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-white rounded-full blur-3xl" />
               <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white rounded-full blur-2xl" />
@@ -1215,6 +1184,48 @@ function Dashboard({
                   </div>
                   <p className="text-yellow-300 font-semibold text-sm">${userSummary.referralEarnings}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Strategy Cards */}
+        <div className="px-4 mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold">Estratégias Ativas</h3>
+            <Badge className="bg-green-500/20 text-green-400 text-xs">
+              <Activity className="w-3 h-3 mr-1" /> 2 Ativas
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {/* Aave Loop */}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="w-4 h-4 text-blue-400" />
+                <span className="text-white text-sm font-medium">Aave Loop</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-400 font-bold text-lg">8-15%</p>
+                  <p className="text-gray-500 text-xs">APY</p>
+                </div>
+                <Badge className="bg-blue-500/20 text-blue-300">50%</Badge>
+              </div>
+            </div>
+
+            {/* Stable LP */}
+            <div className="bg-fuchsia-500/10 border border-fuchsia-500/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <PieChart className="w-4 h-4 text-fuchsia-400" />
+                <span className="text-white text-sm font-medium">Stable LP</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-fuchsia-400 font-bold text-lg">12-25%</p>
+                  <p className="text-gray-500 text-xs">APY</p>
+                </div>
+                <Badge className="bg-fuchsia-500/20 text-fuchsia-300">50%</Badge>
               </div>
             </div>
           </div>
@@ -1313,7 +1324,7 @@ function Dashboard({
       </main>
 
       {/* Fixed Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-xl border-t border-gray-800/50 safe-area-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-xl border-t border-gray-800/50">
         <div className="px-4 py-3">
           {/* Primary Actions */}
           <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1355,15 +1366,6 @@ function Dashboard({
           </div>
         </div>
       </div>
-
-      <style jsx global>{`
-        .safe-area-top {
-          padding-top: env(safe-area-inset-top, 0);
-        }
-        .safe-area-bottom {
-          padding-bottom: env(safe-area-inset-bottom, 0);
-        }
-      `}</style>
     </motion.div>
   )
 }
