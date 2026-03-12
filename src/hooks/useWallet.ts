@@ -1,8 +1,8 @@
 'use client'
 
-import { useAccount, useConnect, useDisconnect, useBalance, useChainId } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useBalance, useChainId, useSwitchChain } from 'wagmi'
 import { polygon } from 'wagmi/chains'
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore, useEffect } from 'react'
 
 // Simple store for mounted state
 let mounted = false
@@ -52,6 +52,7 @@ export function useWallet(): WalletData & WalletActions {
   const { connect, connectors, isPending: isConnecting } = useConnect()
   const { disconnect } = useDisconnect()
   const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
   const isMounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   // Get MATIC balance
@@ -64,48 +65,73 @@ export function useWallet(): WalletData & WalletActions {
   const isCorrectNetwork = chainId === polygon.id
 
   const switchToPolygon = useCallback(async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x89' }], // Polygon Mainnet
-        })
-      } catch (switchError: unknown) {
-        const error = switchError as { code?: number }
-        // Chain not added to wallet
-        if (error.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0x89',
-                chainName: 'Polygon Mainnet',
-                nativeCurrency: {
-                  name: 'MATIC',
-                  symbol: 'MATIC',
-                  decimals: 18,
-                },
-                rpcUrls: ['https://polygon-rpc.com'],
-                blockExplorerUrls: ['https://polygonscan.com'],
-              }],
-            })
-          } catch (addError) {
-            console.error('Error adding Polygon network:', addError)
+    try {
+      switchChain?.({ chainId: polygon.id })
+    } catch (error) {
+      console.error('Error switching to Polygon:', error)
+      // Fallback to direct ethereum request
+      if (typeof window !== 'undefined' && window.ethereum) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x89' }], // Polygon Mainnet
+          })
+        } catch (switchError: unknown) {
+          const err = switchError as { code?: number }
+          // Chain not added to wallet
+          if (err.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0x89',
+                  chainName: 'Polygon Mainnet',
+                  nativeCurrency: {
+                    name: 'MATIC',
+                    symbol: 'MATIC',
+                    decimals: 18,
+                  },
+                  rpcUrls: ['https://polygon-rpc.com'],
+                  blockExplorerUrls: ['https://polygonscan.com'],
+                }],
+              })
+            } catch (addError) {
+              console.error('Error adding Polygon network:', addError)
+            }
           }
         }
       }
     }
-  }, [])
+  }, [switchChain])
 
   const handleConnect = useCallback(() => {
+    // Check if MetaMask is installed
+    if (typeof window !== 'undefined' && !window.ethereum) {
+      console.error('No wallet extension found')
+      // Open MetaMask download page
+      window.open('https://metamask.io/download/', '_blank')
+      return
+    }
+
     // Find injected connector (MetaMask, etc.)
-    const injected = connectors.find(c => c.id === 'injected' || c.id === 'metaMask')
-    if (injected) {
-      connect({ connector: injected })
-    } else if (connectors.length > 0) {
-      connect({ connector: connectors[0] })
+    const connector = connectors[0]
+    if (connector) {
+      connect({ connector })
     }
   }, [connect, connectors])
+
+  // Auto-reconnect on mount
+  useEffect(() => {
+    if (isMounted && account.connector && !account.isConnected) {
+      // Try to reconnect with the last used connector
+      const lastConnector = connectors.find(c => c.id === account.connector?.id)
+      if (lastConnector) {
+        connect({ connector: lastConnector }).catch(() => {
+          // Silently fail - user needs to manually connect
+        })
+      }
+    }
+  }, [isMounted]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Don't render wallet data until mounted (prevents hydration mismatch)
   if (!isMounted) {
@@ -150,6 +176,7 @@ declare global {
   interface Window {
     ethereum?: {
       request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+      isMetaMask?: boolean
     }
   }
 }
