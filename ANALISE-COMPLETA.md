@@ -55,10 +55,16 @@ YieldVaultV3 --> StrategyControllerV3
    Rendimento real DeFi
 ```
 
-### 2.3. Sistema de Referral (MLM 5 Niveis)
-O sistema de indicacao distribui comissoes **sobre o RENDIMENTO** dos investidores indicados, NAO sobre o valor depositado.
+### 2.3. Sistema de Referral / MLM (5 Niveis + Bonus de Equipe)
+O sistema de indicacao tem **dois componentes de bonus**:
 
-**PROBLEMA ATUAL:** No codigo atual (`LocalStrategyManagerV3.sol` linha 77), o referral e chamado com `amountAfterFee` (valor do deposito), nao com o rendimento. Isso precisa ser corrigido na reestruturacao.
+**Componente 1 - Bonus de Rendimento da Rede:**
+Comissoes sobre o **RENDIMENTO** gerado pelos investidores indicados (5 niveis), NAO sobre o valor depositado.
+
+**Componente 2 - Bonus de Volume da Rede:**
+Bonus baseado no **volume total depositado** pela equipe do indicador.
+
+**PROBLEMA ATUAL:** No codigo atual (`LocalStrategyManagerV3.sol` linha 77), o referral e chamado com `amountAfterFee` (valor do deposito), nao com o rendimento. Precisa ser corrigido. E o bonus de volume nao existe ainda.
 
 ```
 Investidor gera rendimento
@@ -66,13 +72,14 @@ Investidor gera rendimento
         v
 Rendimento do investidor e calculado
         |
-        v
-Comissao de referral e calculada SOBRE O RENDIMENTO
+        +--> Bonus de Rendimento: comissao SOBRE O RENDIMENTO
+        |    distribuida nos 5 niveis da cadeia
         |
-        v
-Distribuida nos 5 niveis da cadeia
+        +--> Bonus de Volume: comissao sobre o VOLUME TOTAL
+             depositado pela equipe do indicador
 ```
 
+**Taxas de Rendimento da Rede (configuraveis pelo admin):**
 | Nivel | Comissao (sobre o rendimento) |
 |-------|-------------------------------|
 | Nivel 1 (direto) | 40% |
@@ -81,6 +88,8 @@ Distribuida nos 5 niveis da cadeia
 | Nivel 4 | 12% |
 | Nivel 5 | 8% |
 | **Total** | **100% do bonus de referral** |
+
+**Bonus de Volume:** Taxa configuravel pelo admin (ex: 0.5% do volume da equipe).
 
 ---
 
@@ -368,16 +377,32 @@ yieldvault-defi/
 
 ---
 
-## 11. CONCLUSAO
+## 11. REGRAS DE NEGOCIO DEFINIDAS PELO OWNER
 
-O YieldVault DeFi e uma plataforma de investimento em USDT na Polygon com dois modos de operacao:
+Estas sao as regras definitivas que devem guiar toda a reestruturacao:
 
-1. **Vault Interno:** Rendimento proveniente de injecao externa (empresa de arbitragem). O contrato `LocalStrategyManagerV3` calcula e distribui os juros. O owner injeta USDT para cobrir os pagamentos.
+1. **Dois Modos de Operacao:** O sistema opera em modo Interno (injecao de arbitragem) ou Real (Aave/QuickSwap), alternados pelo admin via painel.
 
-2. **Estrategias Reais DeFi:** Capital alocado em Aave V3 (lending alavancado) e QuickSwap V3 (LP de stablecoins). Atualmente com bugs de compilacao.
+2. **MLM sobre RENDIMENTO:** O sistema de referral (5 niveis) incide exclusivamente sobre o rendimento gerado para o investidor, NUNCA sobre o valor depositado.
 
-3. **Sistema de Referral MLM:** 5 niveis de comissao que devem incidir sobre o RENDIMENTO (nao sobre o deposito como esta implementado atualmente).
+3. **Bonus de Equipe com dois componentes:**
+   - % sobre o rendimento total da rede (5 niveis abaixo)
+   - % sobre o volume total depositado pela equipe
 
-4. **Administracao:** Falta completamente o painel admin com toggle Real/Interno.
+4. **Administracao Total:** O admin/owner tem controle total sobre todos os contratos, juros, configuracoes, banco de dados e carteiras.
 
-O sistema tem uma base solida mas precisa de reestruturacao significativa para funcionar corretamente em ambos os modos.
+5. **Fluxo de Capital Livre:** O owner pode injetar e retirar do vault, e pode direcionar valores do vault para as estrategias e retirar das estrategias a qualquer momento.
+
+---
+
+## 12. CONCLUSAO
+
+O YieldVault DeFi e uma plataforma de investimento em USDT na Polygon com dois modos de operacao. O sistema tem uma base solida de contratos e frontend, mas precisa de reestruturacao significativa:
+
+- **Contratos:** Referral precisa incidir sobre rendimento, taxa de juros precisa ser alteravel, funcoes de movimentacao do owner precisam ser criadas
+- **Painel Admin:** Nao existe e precisa ser criado do zero com controle total
+- **Estrategias Reais:** Existem mas tem bugs de compilacao
+- **Frontend:** UI existe mas deposito/saque nao fazem transacoes reais
+- **Bonus de Volume:** Nao existe no contrato e precisa ser criado
+
+Ver `REESTRUTURACAO.md` para o guia completo de implementacao.
