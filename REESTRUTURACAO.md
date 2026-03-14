@@ -398,74 +398,315 @@ O admin deve poder alterar via painel:
 
 ---
 
-## BLOCO 4: CORRECOES NOS CONTRATOS
+## BLOCO 4: CONTRATOS V4 (NOVOS COM UUPS PROXY)
 
-### 4.1. YieldVaultV3 - Conectar com estrategias e owner controls
+**Decisao:** Os contratos V3 NAO sao proxy e NAO podem ser atualizados.
+Portanto, precisamos de **novos contratos V4** na pasta `contracts-v4/`.
+Todos os V4 usam **UUPS Proxy** (OpenZeppelin) para upgradeabilidade futura.
 
-**Problemas:**
-1. `totalAssets()` so conta saldo proprio (nao inclui estrategias)
-2. `deposit()` nao direciona capital para estrategias
-3. Falta toggle de modo Interno/Real
-4. Falta funcoes de movimentacao de capital pelo owner
+### 4.0. Arquitetura UUPS
 
-**Adicionar ao contrato:**
+Cada contrato V4:
+- Herda `UUPSUpgradeable` do OpenZeppelin
+- Usa `initialize()` em vez de `constructor`
+- Usa `_authorizeUpgrade(address) onlyOwner` para permitir upgrades
+- Deploy via `ERC1967Proxy(implementation, initData)`
+- NAO usa `immutable` (variaveis ficam em storage)
+
+```
+contracts-v4/
+  hardhat.config.ts
+  package.json
+  contracts/
+    LocalStrategyManagerV4.sol    (NOVO - UUPS)
+    ReferralV4.sol                (NOVO - UUPS)
+    YieldVaultV4.sol              (NOVO - UUPS)
+    IReferralV4.sol               (NOVA interface)
+    ConfigV3.sol                  (copia inalterada)
+    FeeDistributorV3.sol          (copia inalterada)
+    interfaces/
+      IAaveV3Pool.sol             (copia)
+      IQuickSwapV3.sol            (copia)
+    strategies/
+      IStrategy.sol               (copia)
+      BaseStrategy.sol            (copia)
+      StrategyControllerV4.sol    (NOVO - UUPS)
+      AaveLoopStrategyV3.sol      (copia com fix compilacao)
+      StableLpStrategyV3.sol      (copia com fix compilacao)
+  test/
+    LocalStrategyManagerV4.test.ts
+    ReferralV4.test.ts
+    YieldVaultV4.test.ts
+    StrategyControllerV4.test.ts
+    helpers/
+      deploy.ts                   (fixtures compartilhados)
+      MockERC20.sol               (mock USDT 6 decimais)
+  scripts/
+    deploy-v4.ts                  (deploy com proxy)
+    upgrade-v4.ts                 (script de upgrade)
+    configure-v4.ts               (wiring dos contratos)
+    migrate-v3-to-v4.ts           (migracao de dados)
+```
+
+### 4.1. ReferralV4.sol (NOVO - maior mudanca)
+
+**Heranca:** `OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable`
+
+**Mudancas do V3:**
+
+1. **Recebe e transfere USDT de verdade** (V3 so registrava no mapping):
+   ```solidity
+   IERC20 public usdt;  // storage, nao immutable
+   mapping(address => uint256) public pendingReferralRewards;
+   uint256 public totalPendingRewards;
+
+   function distributeRewards(address _user, uint256 _yieldAmount)
+       external onlyAuthorized {
+       // Recebe USDT do caller (LocalStrategyManagerV4)
+       usdt.safeTransferFrom(msg.sender, address(this), referralTotal);
+       // Distribui nos 5 niveis, acumulando em pendingReferralRewards
+   }
+
+   function claimReferralRewards() external nonReentrant {
+       uint256 amount = pendingReferralRewards[msg.sender];
+       require(amount > 0, "No rewards");
+       pendingReferralRewards[msg.sender] = 0;
+       totalPendingRewards -= amount;
+       usdt.safeTransfer(msg.sender, amount);
+       emit ReferralRewardsClaimed(msg.sender, amount);
+   }
+   ```
+
+2. **Tracking de volume da equipe (NOVO):**
+   ```solidity
+   struct TeamInfo {
+       uint256 totalTeamDeposited;
+       uint256 directTeamDeposited;
+       uint256 directReferralCount;
+   }
+   mapping(address => TeamInfo) public teamInfo;
+   uint256 public volumeBonusRateBP; // configuravel pelo owner
+
+   function updateTeamVolume(address _user, uint256 _depositAmount)
+       external onlyAuthorized {
+       // Percorre 5 niveis, incrementa totalTeamDeposited
+       // Nivel 0: incrementa directTeamDeposited tambem
+   }
+
+   function setVolumeBonusRate(uint256 _rateBP) external onlyOwner;
+   ```
+
+3. **Access control:**
+   ```solidity
+   address public authorizedCaller; // = LocalStrategyManagerV4
+   function setAuthorizedCaller(address _caller) external onlyOwner;
+   modifier onlyAuthorized() {
+       require(msg.sender == authorizedCaller, "Not authorized");
+       _;
+   }
+   ```
+
+4. **Eventos novos:**
+   - `ReferralRewardAccrued(address indexed referrer, address indexed user, uint256 amount, uint256 level)`
+   - `ReferralRewardsClaimed(address indexed user, uint256 amount)`
+   - `TeamVolumeUpdated(address indexed referrer, uint256 totalTeam, uint256 directTeam)`
+   - `VolumeBonusRateUpdated(uint256 newRate)`
+
+**Interface IReferralV4.sol:**
 ```solidity
-bool public isInternalMode = true;
-address public strategyController;
-
-// Toggle de modo
-function setMode(bool _internal) external onlyOwner {
-    isInternalMode = _internal;
-    emit ModeChanged(_internal);
-}
-
-// totalAssets inclui estrategias quando em modo Real
-function totalAssets() public view returns (uint256) {
-    uint256 vaultBalance = usdtAsset.balanceOf(address(this));
-    if (!isInternalMode && strategyController != address(0)) {
-        vaultBalance += IStrategyController(strategyController).totalAssets();
-    }
-    return vaultBalance;
-}
-
-// Owner direciona capital para estrategia
-function sendToStrategy(uint256 _amount) external onlyOwner {
-    require(strategyController != address(0), "No controller");
-    usdtAsset.safeApprove(strategyController, _amount);
-    IStrategyController(strategyController).deposit(_amount);
-    emit CapitalSentToStrategy(strategyController, _amount);
-}
-
-// Owner retira capital da estrategia
-function pullFromStrategy(uint256 _amount) external onlyOwner {
-    require(strategyController != address(0), "No controller");
-    IStrategyController(strategyController).withdraw(_amount);
-    emit CapitalReturnedFromStrategy(strategyController, _amount);
+interface IReferralV4 {
+    function getReferrer(address user) external view returns (address);
+    function isRegistered(address user) external view returns (bool);
+    function distributeRewards(address user, uint256 yieldAmount) external;
+    function updateTeamVolume(address user, uint256 depositAmount) external;
+    function pendingReferralRewards(address user) external view returns (uint256);
 }
 ```
 
-### 4.2. Estrategias Reais - Corrigir compilacao
+### 4.2. LocalStrategyManagerV4.sol (NOVO - core do sistema)
 
-**AaveLoopStrategyV3.sol:**
-- Corrigir desestruturacoes de tuplas do `getUserAccountData()`
-- Testar compilacao completa
+**Heranca:** `OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable`
 
-**StableLpStrategyV3.sol:**
-- Corrigir desestruturacoes de tuplas
-- Corrigir retornos do `positions()`
-- Testar compilacao completa
+**Mudancas do V3:**
 
-### 4.3. StrategyControllerV3 - Permitir owner direto
+1. **Taxa de juros VARIAVEL (era constant):**
+   ```solidity
+   uint256 public interestRateBPS;      // era: constant INTEREST_RATE_BPS = 100
+   uint256 public compoundInterval;     // era: constant COMPOUND_INTERVAL = 1 days
 
-Atualmente o controller so aceita chamadas do `vault` (modifier `onlyVault`).
-Precisa aceitar tambem do `owner`:
+   function setInterestRate(uint256 _rateBPS) external onlyOwner {
+       require(_rateBPS <= 500, "Max 5% per interval");
+       emit InterestRateUpdated(interestRateBPS, _rateBPS);
+       interestRateBPS = _rateBPS;
+   }
 
+   function setCompoundInterval(uint256 _interval) external onlyOwner {
+       require(_interval >= 1 hours, "Min 1 hour");
+       emit CompoundIntervalUpdated(compoundInterval, _interval);
+       compoundInterval = _interval;
+   }
+   ```
+
+2. **Injecao e retirada de capital com tracking:**
+   ```solidity
+   uint256 public totalInjected;
+   uint256 public totalOwnerWithdrawn;
+
+   function injectCapital(uint256 _amount) external onlyOwner {
+       usdt.safeTransferFrom(msg.sender, address(this), _amount);
+       totalInjected += _amount;
+       emit CapitalInjected(msg.sender, _amount, totalInjected);
+   }
+
+   function ownerWithdraw(uint256 _amount) external onlyOwner {
+       usdt.safeTransfer(owner(), _amount);
+       totalOwnerWithdrawn += _amount;
+       emit OwnerWithdrew(msg.sender, _amount, totalOwnerWithdrawn);
+   }
+   ```
+
+3. **REFERRAL SOBRE RENDIMENTO (correcao critica):**
+   ```solidity
+   // deposit() - SEM referral (era chamado aqui no V3)
+   function deposit(uint256 _amount) external nonReentrant whenNotPaused {
+       // ... calcula fee, registra deposito ...
+       // NOVO: atualiza volume da equipe (para bonus de volume)
+       referral.updateTeamVolume(msg.sender, amountAfterFee);
+       // NAO chama distributeReferralRewards aqui!
+   }
+
+   // claimRewards() - COM referral (NOVO)
+   function claimRewards() external nonReentrant {
+       _accrueRewards(msg.sender);
+       uint256 rewards = user.pendingRewards;
+       require(rewards > 0, "No rewards");
+
+       // Solvencia check
+       uint256 available = usdt.balanceOf(address(this));
+       require(available >= rewards, "Insufficient balance");
+
+       // NOVO: referral sobre o RENDIMENTO
+       uint256 referralAmount = _distributeReferralRewards(msg.sender, rewards);
+
+       user.pendingRewards = 0;
+       uint256 userReward = rewards - referralAmount;
+       usdt.safeTransfer(msg.sender, userReward);
+       emit RewardsClaimed(msg.sender, userReward);
+   }
+   ```
+
+4. **Funcoes de movimentacao owner <-> estrategias:**
+   ```solidity
+   address public strategyController;
+   bool public isInternalMode = true;
+
+   function depositToStrategy(uint256 _amount) external onlyOwner {
+       usdt.safeApprove(strategyController, _amount);
+       IStrategyController(strategyController).deposit(_amount);
+       emit DepositedToStrategy(strategyController, _amount);
+   }
+
+   function withdrawFromStrategy(uint256 _amount) external onlyOwner {
+       IStrategyController(strategyController).withdraw(_amount);
+       emit WithdrawnFromStrategy(strategyController, _amount);
+   }
+
+   function setMode(bool _isInternal) external onlyOwner {
+       isInternalMode = _isInternal;
+       emit ModeChanged(_isInternal);
+   }
+   ```
+
+5. **Eventos novos:**
+   - `CapitalInjected(address indexed from, uint256 amount, uint256 totalInjected)`
+   - `OwnerWithdrew(address indexed to, uint256 amount, uint256 totalOwnerWithdrawn)`
+   - `InterestRateUpdated(uint256 oldRate, uint256 newRate)`
+   - `CompoundIntervalUpdated(uint256 oldInterval, uint256 newInterval)`
+   - `DepositedToStrategy(address indexed controller, uint256 amount)`
+   - `WithdrawnFromStrategy(address indexed controller, uint256 amount)`
+   - `ModeChanged(bool isInternal)`
+
+### 4.3. YieldVaultV4.sol (NOVO)
+
+**Heranca:** `OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable`
+
+**Mudancas do V3:**
+
+1. **Toggle de modo + totalAssets inclui estrategias:**
+   ```solidity
+   bool public isInternalMode = true;
+   address public strategyController;
+
+   function totalAssets() public view returns (uint256) {
+       uint256 vaultBalance = usdtAsset.balanceOf(address(this));
+       if (!isInternalMode && strategyController != address(0)) {
+           vaultBalance += IStrategyController(strategyController).totalAssets();
+       }
+       return vaultBalance;
+   }
+   ```
+
+2. **Funcoes owner para mover capital:**
+   ```solidity
+   function sendToStrategy(uint256 _amount) external onlyOwner;
+   function pullFromStrategy(uint256 _amount) external onlyOwner;
+   ```
+
+3. Mantem toda a logica ERC4626-like de shares, fees, pause existente.
+
+### 4.4. StrategyControllerV4.sol (mudanca minima)
+
+**Unica mudanca:** Modifier `onlyVault` vira `onlyVaultOrOwner`:
 ```solidity
 modifier onlyVaultOrOwner() {
     require(msg.sender == vault || msg.sender == owner(), "Not authorized");
     _;
 }
 ```
+Aplicado em `deposit()` e `withdraw()`. Tudo mais igual ao V3.
+
+### 4.5. Fixes de compilacao nas estrategias
+
+**AaveLoopStrategyV3.sol e StableLpStrategyV3.sol:**
+- Corrigir desestruturacoes de tuplas em `getReserveData()` (10 retornos)
+- Corrigir desestruturacoes em `slot0()` (7 retornos)
+- Garantir que virgulas finais nao causem erro
+
+### 4.6. Ordem de Deploy
+
+```
+1. ConfigV3         (redeployar ou reutilizar existente)
+2. FeeDistributorV3 (redeployar ou reutilizar existente)
+3. ReferralV4       (deploy proxy: ERC1967Proxy + implementation)
+4. LocalStrategyManagerV4 (deploy proxy, depende de ReferralV4 + FeeDistributor)
+5. StrategyControllerV4   (deploy proxy)
+6. YieldVaultV4           (deploy proxy)
+7. Configuracao pos-deploy:
+   - referralV4.setAuthorizedCaller(localStrategyManagerV4)
+   - strategyControllerV4.setVault(yieldVaultV4)
+   - yieldVaultV4.setStrategyController(strategyControllerV4)
+   - yieldVaultV4.setLocalStrategyManager(localStrategyManagerV4)
+   - localStrategyManagerV4.setStrategyController(strategyControllerV4)
+8. Fix e redeploy AaveLoopStrategyV3 e StableLpStrategyV3
+9. Registrar estrategias no StrategyControllerV4
+```
+
+### 4.7. Migracao V3 -> V4
+
+1. Pausar todos os contratos V3 (`pause()`)
+2. Owner usa `emergencyWithdraw()`/`sweep()` para extrair USDT dos V3
+3. Deploy contratos V4 com proxy
+4. Owner faz `injectCapital()` no LocalStrategyManagerV4
+5. Usuarios precisam re-depositar no V4 (ou criar funcao de migracao)
+6. Frontend atualiza enderecos para V4
+
+### 4.8. Consideracoes tecnicas
+
+**Aprovacao USDT:** Usar `safeApprove(addr, 0)` antes de `safeApprove(addr, amount)` (USDT reverte se allowance != 0 e novo valor != 0).
+
+**Solvencia no claim:** O check de solvencia deve considerar o total: reward do usuario + referral bonus. Se nao houver saldo para ambos, nao permite claim.
+
+**Private key no deploy.js V3:** Chave privada esta hardcoded no `contracts-v3/deploy.js`. O script V4 deve usar APENAS variaveis de ambiente.
 
 ---
 
@@ -664,13 +905,25 @@ Todas as rotas admin devem verificar que o caller e o owner.
 ## MAPA DE DEPENDENCIAS
 
 ```
-[Prioridade 1]
+[Prioridade 1 - Contratos V4 + UUPS]
    |
-   +--> Contratos: LocalStrategyManagerV3 (taxa alteravel, injecao, referral fix)
+   +--> ReferralV4 (bonus rendimento + volume, claim real, USDT transfer)
    |        |
-   |        +--> YieldVaultV3 (toggle modo, funcoes owner)
+   |        +--> IReferralV4 (nova interface)
+   |
+   +--> LocalStrategyManagerV4 (taxa alteravel, injecao, referral sobre yield)
    |        |
-   |        +--> ReferralV3 (bonus rendimento + volume, claim real)
+   |        +--> Depende de: ReferralV4 + FeeDistributorV3
+   |
+   +--> YieldVaultV4 (toggle modo, totalAssets inclui estrategias)
+   |
+   +--> StrategyControllerV4 (onlyVaultOrOwner)
+   |
+   +--> Deploy com ERC1967Proxy + configuracao pos-deploy
+   |
+   +--> Migracao V3 -> V4 (pausar V3, extrair, injetar V4)
+
+[Prioridade 1 - Frontend + Admin]
    |
    +--> Frontend: /admin (painel completo)
    |        |
@@ -680,13 +933,13 @@ Todas as rotas admin devem verificar que o caller e o owner.
    |
    +--> Frontend: page.tsx (deposito, saque, claim funcionais)
 
-[Prioridade 2]
+[Prioridade 2 - Estrategias]
    |
    +--> AaveLoopStrategyV3 (fix compilacao)
    |
    +--> StableLpStrategyV3 (fix compilacao)
    |
-   +--> StrategyControllerV3 (permitir owner direto)
+   +--> Registrar no StrategyControllerV4
    |
    +--> Deploy testnet + testes
 
